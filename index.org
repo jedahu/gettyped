@@ -1,0 +1,19 @@
+#+TITLE: Main
+#+AUTHOR: Jeremy Hughes
+#+EMAIL: jedahu@gmail.com
+#+DATE: [2017-04-21 Fri]
+
+#+HTML_DOCTYPE: html5
+
+#+BEGIN_EXPORT html
+<link rel="stylesheet" href="main.css">
+<script src="main.js"></script>
+#+END_EXPORT
+
+* Types
+
+#+BEGIN_SRC ts
+  namespace maybe {
+      export function __eval() { return "done"; }
+  }
+#+END_SRC
