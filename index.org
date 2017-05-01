@@ -1,19 +1,276 @@
 #+TITLE: Main
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-04-21 Fri]
+#+DATE: [2017-05-02 Tue]
 
 #+HTML_DOCTYPE: html5
+#+PROPERTY: header-args :noweb yes :mkdirp yes
 
 #+BEGIN_EXPORT html
-<link rel="stylesheet" href="main.css">
-<script src="main.js"></script>
+<link rel="stylesheet" href="app.css">
+<script src="ace/ace.js"></script>
+<script src="app.js"></script>
 #+END_EXPORT
+
+# #+PANDOC_METADATA: "header-includes:<link rel='stylesheet' href='app.css'><script src='ace/ace.js'></script><script src='app.js'></script>"
 
 * Types
 
+** Maybe – null done right
+
+*** Motivation
+
+- Handle optional values without guessing and without exceptions
+- Maintain type invariants in smart constructors
+
+~Maybe~ guarantees exception free and guess free optional value handling by
+providing only one function for getting at the optional value, a function that
+requires function arguments that handle both present and absent states.
+
+#+BEGIN_TYPE_INFO
+- type :: ~Maybe<A>~
+- impl :: [[https://hackage.haskell.org/package/base/docs/Data-Maybe.html][Haskell]]([[https://hackage.haskell.org/package/base/docs/src/Data.Maybe.html][src]]), [[https://doc.rust-lang.org/std/option/][Rust]]([[https://doc.rust-lang.org/src/core/up/src/libcore/option.rs.html][src]]), [[https://msdn.microsoft.com/en-us/visualfsharpdocs/conceptual/core.option-module-%5Bfsharp%5D][F#]]([[https://github.com/fsharp/fsharp/blob/master/src/fsharp/FSharp.Core/option.fs][src]])
+- docs :: [[https://wiki.haskell.org/Maybe][Haskell wiki]], [[https://fsharpforfunandprofit.com/posts/the-option-type/][F# post]], [[https://en.wikipedia.org/wiki/Option_type][Wikipedia]]
+#+END_TYPE_INFO
+
+*** Minimal API
+
+- A nullary constructor
+- A 1-ary constructor
+- A function that folds over the constructor cases
+
 #+BEGIN_SRC ts
-  namespace maybe {
-      export function __eval() { return "done"; }
+  class Maybe<A> {
+      static nothing : Maybe<A>;
+
+      static just(a : A) : Maybe<A>;
+
+      fold<B>(nothing : () => B, just : (A) => B) : B;
   }
 #+END_SRC
+
+This API provides no way to dereference the Maybe-wrapped value directly. ~fold~
+ensures that the ~Nothing~ case is handled.
+
+*** Extended API
+
+#+NAME: Maybe-extended-api
+#+BEGIN_SRC ts
+  or(other : () => Maybe<A>) : Maybe<A> {
+      return this.fold(other, _ => this);
+  }
+
+  valueOr(other : () => A) : A {
+      return this.fold(other, a => a);
+  }
+
+  map<B>(f : (a:A) => B) : Maybe<B> {
+      return this.fold(() => Maybe.nothing<B>(), a => Maybe.just<B>(f(a)));
+  }
+
+  flatMap<B>(f : (a:A) => Maybe<B>) : Maybe<B> {
+      return this.fold(() => Maybe.nothing<B>(), f);
+  }
+
+  zip<B>(other : Maybe<B>) : Maybe<[A, B]> {
+      return this.flatMap(a => other.map(b => <[A, B]>[a, b]));
+  }
+
+  justAct(f : (a:A) => void) : void {
+      this.fold(() => {}, f);
+  }
+
+  static catchError<A>(f : () => A) : Maybe<A> {
+      try {
+          return Maybe.just(f());
+      }
+      catch (_) {
+          return Maybe.nothing<A>();
+      }
+  }
+
+  static when<A>(test : boolean, val : () => A) : Maybe<A> {
+      return test ? Maybe.just(val()) : Maybe.nothing<A>();
+  }
+
+  static unless<A>(test : boolean, val : () => A) : Maybe<A> {
+      return Maybe.when(!test, val);
+  }
+#+END_SRC
+
+*** Implementation
+
+#+NAME: Maybe-implementation
+#+BEGIN_SRC ts :noweb strip-export
+  export class Maybe<A> {
+      static nothing<A>() : Maybe<A> {
+          return new Maybe<A>(null);
+      }
+
+      static just<A>(a : A) : Maybe<A> {
+          return new Maybe({just: a});
+      }
+
+      fold<B>(nothing: () => B, just: (a:A) => B): B {
+          return this.value === null ? nothing() : just(this.value.just);
+      }
+
+      <<Maybe-extended-api>>
+
+      private readonly value : null | {just : A};
+
+      private constructor(value : null | {just : A}) {
+          this.value = value;
+      }
+
+      protected [Symbol.species] : "f419bf14-c1e9-43f5-92c3-ac944652e72b";
+  }
+#+END_SRC
+
+*** Module
+
+#+NAME: data/maybe
+#+BEGIN_SRC ts-edit :tangle src/data/maybe.ts
+  <<Maybe-implementation>>
+#+END_SRC
+
+*** Maybe vs null
+
+Assuming the following values:
+
+#+NAME: demo/data/maybe/null
+#+BEGIN_SRC ts-edit :tangle src/demo/data/maybe/null.ts
+  export class Name {
+      first : string;
+      last : string;
+
+      constructor(first : string, last : string) {
+          this.first = first;
+          this.last = last;
+      }
+  }
+
+  export const absent = () : string => "nobody\n";
+  export const present = (n : Name) : string => `${n.first} ${n.last}\n`;
+#+END_SRC
+
+A typical null-check,
+#+NAME: demo/data/re-null/maybe/null/typicalCheck
+#+BEGIN_SRC ts-edit :tangle src/demo/data/maybe/null/typicalCheck.ts
+  import * as t from "demo/data/maybe/null";
+
+  const line = (n : t.Name) : string =>
+      n === null ? t.absent() : t.present(n);
+
+  export const __eval = () => {
+      var a = line(new t.Name("Lewis", "Caroll"));
+      var b = line(null);
+      return a + b;
+  }
+#+END_SRC
+
+exhibits a lack of type safety in two ways:
+
+- assumption ::
+     The programmer assumes ~n~ is not ~null~ and doesn’t write the null check.
+
+     #+NAME: demo/re-null/data/maybe/null/notNullAssumption
+     #+BEGIN_SRC ts-edit :tangle src/demo/re-null/data/maybe/null/notNullAssumption.ts
+       import * as t from "demo/data/maybe/null";
+
+       const line = (n : t.Name) : string =>
+             t.present(n);
+
+       export const __eval = () => {
+           var a = line(new t.Name("Lewis", "Caroll"));
+           var b = line(null);
+           return a + b;
+       }
+     #+END_SRC
+
+- boolean blindness ::
+     The compiler doesn’t stop accidental dereferencing, as in this
+     transposition.
+     #+NAME: demo/re-null/data/maybe/null/accidentalDereference
+     #+BEGIN_SRC ts-edit :tangle src/demo/re-null/data/maybe/null/accidentalDereference.ts
+       import * as t from "demo/data/maybe/null";
+
+       const line = (n : t.Name) : string =>
+           n === null ? t.present(n) : t.absent();
+
+       export const __eval = () => {
+           var a = line(new t.Name("Lewis", "Caroll"));
+           var b = line(null);
+           return a + b;
+       }
+     #+END_SRC
+
+Boolean blindness is [[bb][well described by Robert Harper]]. Here’s the money quote:
+
+#+LINK: bb https://existentialtype.wordpress.com/2011/03/15/boolean-blindness/
+     
+#+BEGIN_QUOTE
+Another harm is the condition of Boolean blindness alluded to earlier. Suppose
+that I evaluate the expression e=e’ to test whether e and e’ are equal. I have
+in my hand a bit. The bit itself has no intrinsic meaning; I must associate a
+provenance with that bit in order to give it meaning. “This bit being true
+means that e and e’ are equal, whereas this other bit being false means that
+some other two expressions are not equal.” Keeping track of this information
+(or attempting to recover it using any number of program analysis techniques) is
+notoriously difficult. The only thing you can do with a bit is to branch on it,
+and pretty soon you’re lost in a thicket of if-the-else’s, and you lose track
+of what’s what. Evolve the program a little, and you’re soon out to sea, and
+find yourself in need of sat solvers to figure out what the hell is going on.
+#+END_QUOTE
+
+~Maybe~ solves both issues.
+#+NAME: demo/data/maybe/null/solved
+#+BEGIN_SRC ts-edit :tangle src/demo/data/maybe/null/solved.ts
+  import * as m from "data/maybe";
+  import * as t from "demo/data/maybe/null";
+
+  const line = (n : m.Maybe<t.Name>) : string =>
+        n.fold(t.absent, t.present);
+
+  export const __eval = () => {
+      var a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+      var b = line(m.Maybe.nothing<t.Name>());
+      return a + b;
+  }
+#+END_SRC
+
+- assumption ::
+     The programmer cannot get at the value of a ~Maybe~ without going through
+     ~Maybe.fold~.
+- boolean blindness ::
+     ~Maybe.fold~ provides a value only to the ~just~ case:
+     #+NAME: demo/ce/data/maybe/null/forcedToHandle
+     #+BEGIN_SRC ts-edit :tangle src/demo/ce/data/maybe/null/forcedToHandle.ts
+       import * as m from "data/maybe";
+       import * as t from "demo/data/maybe/null";
+
+       const line = (n : m.Maybe<t.Name>) : string =>
+             t.present(n);
+
+       export const __eval = () => {
+           var a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+           var b = line(m.Maybe.nothing<t.Name>());
+           return a + b;
+       }
+     #+END_SRC
+
+     An accidental transposition results in a compile time error:
+     #+NAME: demo/ce/data/maybe/null/transpositionError
+     #+BEGIN_SRC ts-edit :tangle src/demo/ce/data/maybe/null/transpositionError.ts
+       import * as m from "data/maybe";
+       import * as t from "demo/data/maybe/null";
+
+       const line = (n : m.Maybe<t.Name>) : string =>
+             n.fold(t.present, t.absent)
+
+       export const __eval = () => {
+           var a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+           var b = line(m.Maybe.nothing<t.Name>());
+           return a + b;
+           }
+     #+END_SRC

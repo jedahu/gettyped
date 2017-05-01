@@ -4,13 +4,24 @@
         "jquery": "^3.2.1",
         "plugin-typescript": "^7.0.6",
         "systemjs": "^0.20.12",
-        "typescript": "^2.2.2",
+        "typescript": "^2.3.2",
         "typescript-simple": "^8.0.0"
     },
     "devDependencies": {
+        "@types/chai": "^3.5.2",
+        "@types/mocha": "^2.2.41",
+        "@types/node": "^7.0.14",
         "brfs": "^1.4.3",
         "browserify": "^14.3.0",
+        "chai": "^3.5.0",
+        "glob-fs": "^0.1.6",
         "http-server": "^0.9.0",
-        "source-map-support": "^0.4.14"
+        "mocha": "^3.3.0",
+        "painless": "^0.9.5",
+        "shx": "^0.2.2",
+        "source-map-support": "^0.4.14",
+        "ts-node": "^3.0.2",
+        "tsconfig-paths": "^2.1.2",
+        "tslint": "^5.1.0"
     }
 }

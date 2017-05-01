@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "alwaysStrict": true,
+        "lib": ["ES6"],
+        "module": "CommonJS",
+        "moduleResolution": "Node",
+        "newLine": "lf",
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "strictNullChecks": true,
+        "target": "ES3",
+        "baseUrl": "./src",
+        "rootDir": "./src",
+        "outDir": "./out"
+    }
+}
