@@ -1,0 +1,9 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "lib": ["ES6", "WebWorker"],
+        "strictNullChecks": false,
+        "types": []
+    },
+    "include": ["./**/*.ts"]
+}

@@ -1,7 +1,7 @@
 #+TITLE: Main
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-05-02 Tue]
+#+DATE: [2017-05-05 Fri]
 
 #+HTML_DOCTYPE: html5
 #+PROPERTY: header-args :noweb yes :mkdirp yes
@@ -13,6 +13,14 @@
 #+END_EXPORT
 
 # #+PANDOC_METADATA: "header-includes:<link rel='stylesheet' href='app.css'><script src='ace/ace.js'></script><script src='app.js'></script>"
+
+#+BEGIN_SRC json :tangle src/tsconfig.json
+  {
+      "extends": "../tsconfig.json",
+      "include": ["./**/*.ts"],
+      "exclude": ["./demo*", "./test*"]
+  }
+#+END_SRC
 
 * Types
 

@@ -1,8 +1,13 @@
 {
     "dependencies": {
+        "@types/react": "^15.0.23",
+        "@types/react-dom": "^15.5.0",
         "ace-builds": "^1.2.6",
+        "almond": "^0.3.3",
         "jquery": "^3.2.1",
         "plugin-typescript": "^7.0.6",
+        "react": "^15.5.4",
+        "react-dom": "^15.5.4",
         "systemjs": "^0.20.12",
         "typescript": "^2.3.2",
         "typescript-simple": "^8.0.0"
@@ -11,6 +16,7 @@
         "@types/chai": "^3.5.2",
         "@types/mocha": "^2.2.41",
         "@types/node": "^7.0.14",
+        "awesome-typescript-loader": "^3.1.3",
         "brfs": "^1.4.3",
         "browserify": "^14.3.0",
         "chai": "^3.5.0",
@@ -18,10 +24,23 @@
         "http-server": "^0.9.0",
         "mocha": "^3.3.0",
         "painless": "^0.9.5",
+        "raw-loader": "^0.5.1",
+        "raw-text-loader": "^0.1.1",
         "shx": "^0.2.2",
+        "source-map-loader": "^0.2.1",
         "source-map-support": "^0.4.14",
         "ts-node": "^3.0.2",
         "tsconfig-paths": "^2.1.2",
-        "tslint": "^5.1.0"
-    }
+        "tslint": "^5.1.0",
+        "webpack": "^2.4.1",
+        "webpack-dev-server": "^2.4.5",
+        "worker-loader": "^0.8.0"
+    },
+    "name": "gettyped",
+    "version": "0.1.0",
+    "description": "Library and motivation for static types",
+    "main": "index.js",
+    "repository": "git@github.com:jedahu/gettyped.git",
+    "author": "Jeremy Hughes <jedahu@gmail.com>",
+    "license": "MIT"
 }

@@ -1,63 +1,53 @@
 SHELL = /usr/bin/env bash -O globstar
 NBIN = $(shell yarn bin)
 
-APP_SRC := $(shell ls src/app/**/*.ts)
-WORKER_SRC := $(shell ls src/worker/**/*.ts)
+APP_SRC := $(shell ls app/main/**/*)
+WORKER_SRC := $(shell ls app/worker/**/*)
 
 src/.canary: index.org build.el
-	emacs --batch -Q -l build.el -f gettyped-tangle-src && touch $@ || rm $@
-
-src/lib/typescript-simple.js: node_modules/typescript-simple/index.js
-	mkdir -p src/lib
-	(sed -e 's|fs\.readFileSync(defaultLibPath)|fs.readFileSync("node_modules/typescript/lib/lib.es6.d.ts")|' | sed -e 's|var defaultLibPath|// var defaultLibPath|') < $< > $@
-
-src/lib/typescript-simple.d.ts: node_modules/typescript-simple/index.d.ts
-	cp $< $@
+	emacs --batch -Q -l build.el -f gettyped-tangle-src && touch $@ || (rm $@ && exit 1)
 
 tmp/index.expanded.org: index.org build.el
 	emacs --batch -Q -l build.el -f gettyped-build-html
 
-site/index.html: tmp/index.expanded.org
+site/index.html: tmp/index.expanded.org header.html
 	mkdir -p site
 	pandoc -f org -t html5 \
 		-o site/index.html \
 		--parse-raw --standalone \
-		tmp/index.expanded.org \
-		--metadata="header-includes:<link rel='stylesheet' href='app.css'><script src='ace/ace.js'></script><script src='app.js'></script>"
+		-H header.html \
+		tmp/index.expanded.org
 
-out/worker/index.js: $(WORKER_SRC) src/lib/typescript-simple.js src/lib/typescript-simple.d.ts
-	$(NBIN)/tsc -p src/worker || rm $@
+out/app/worker/index.js: $(WORKER_SRC)
+	$(NBIN)/tsc -p app/worker/tsconfig.json || (rm $@ && exit 1)
 
-out/app/index.js: $(APP_SRC)
-	$(NBIN)/tsc -p src/app || rm $@
+out/app/main/index.js: $(APP_SRC)
+	$(NBIN)/tsc -p app/main/tsconfig.json || (rm $@ && exit 1)
 
-site/worker.js: out/worker/index.js
+site/worker.js: out/app/worker/index.js
 	mkdir -p site
-	NODE_PATH=out $(NBIN)/browserify -t brfs $< > $@ || rm $@
+	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
 
-site/app.js: out/app/index.js
+site/app.js: out/app/main/index.js
 	mkdir -p site
-	NODE_PATH=out $(NBIN)/browserify $< > $@ || rm $@
-
-site/ace/ace.js: node_modules/ace-builds/package.json
-	cp -R node_modules/ace-builds/src-noconflict site/ace
-
-.PHONY: lib
-lib: src/lib/typescript-simple.js src/lib/typescript-simple.d.ts
+	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
 
 .PHONY: src
-src: lib tangle
+src: tangle
 
 .PHONY: statics
 statics: $(shell ls static/**/*)
-	mkdir -p site
+	mkdir -p site/lib
 	cp -R static site/
+	cp node_modules/react/dist/react.js site/lib/
+	cp node_modules/react-dom/dist/react-dom.js site/lib/
+	cp -R node_modules/ace-builds/src-noconflict site/lib/ace
 
 .PHONY: worker
 worker: site/worker.js
 
 .PHONY: app
-app: site/app.js site/ace/ace.js
+app: site/app.js
 
 .PHONY: tangle
 tangle: src/.canary
@@ -67,6 +57,10 @@ html: site/index.html
 
 .PHONY: site
 site: html worker app statics
+
+.PHONY: webpack
+webpack: html
+	$(NBIN)/webpack
 
 .PHONY: serve
 serve: site
@@ -78,5 +72,4 @@ lint-worker:
 
 .PHONY: clean
 clean:
-	(cd src; rm -rf `ls . | grep -v -e test -e app -e worker -e external.d.ts -e tsconfig.json`)
-	rm -rf out site tmp src/.canary
+	rm -rf out site tmp src

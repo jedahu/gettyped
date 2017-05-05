@@ -1,7 +1,9 @@
 {
     "compilerOptions": {
         "lib": ["ES2015", "DOM"],
-        "allowJs": true
+        "allowJs": true,
+        "jsx": "react",
+        "strictNullChecks": false
     },
     "extends": "../../tsconfig.json",
     "include": ["./**/*.ts", "../external.d.ts"]

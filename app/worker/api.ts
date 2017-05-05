@@ -41,7 +41,7 @@ export type CompileFailure = {
     status : "error";
     kind : "compile";
     error : string;
-    errorLines : Array<[number, string]>;
+    errors : Array<{module : string, syntax : any, semantics : any}>;
 };
 
 export type EvaluateResponse =

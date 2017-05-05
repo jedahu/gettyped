@@ -1,6 +1,5 @@
 import * as api from "../worker/api";
-
-declare const ace : any;
+import * as ace from "ace";
 
 type Editor = any;
 
@@ -13,7 +12,7 @@ type ModuleUi = {
 
 type ModuleUis = {[key : string] : ModuleUi};
 
-const worker = new Worker("worker.js");
+const worker = new Worker("./worker.bundle.js");
 
 const allModuleElems = () =>
     Array.from(document.querySelectorAll(".ts-edit"));
@@ -149,7 +148,7 @@ window.addEventListener("load", () => {
         modules: moduleUisInOrder.map(([m, ui]) => [m, ui.editor.getValue()])
     });
 
-    worker.onmessage = e => {
+    worker.onmessage = (e : any) => {
         const data = e.data;
         const handler = handlers[data.action];
         if (handler) {
