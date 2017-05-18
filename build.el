@@ -1,6 +1,11 @@
+(setq arg0 (elt argv 2))
+(setq arg1 (elt argv 3))
+
 (setq debug-on-error t)
 (setq indent-tabs-mode nil)
 (setq org-src-preserve-indentation t)
+
+(setq gettyped--root default-directory)
 
 (defvar gettyped--verbose nil)
 
@@ -40,10 +45,11 @@
   (gettyped--info "HTML")
   (require 'org)
   (require 'ox-org)
-  (with-current-buffer (find-file "index.org")
-    (let ((content (org-export-as 'org)))
-      (make-directory "tmp" t)
-      (with-current-buffer (find-file "tmp/index.expanded.org")
+  (with-current-buffer (find-file arg0)
+    (let ((content (org-export-as 'org))
+          (default-directory gettyped--root))
+      (make-directory (file-name-directory arg1) t)
+      (with-current-buffer (find-file arg1)
         (delete-region (point-min) (point-max))
         (insert content)
         (save-buffer)))))
@@ -53,7 +59,7 @@
   (gettyped--info "TANGLE")
   (require 'org)
   (require 'ob-tangle)
-  (with-current-buffer (find-file "index.org")
+  (with-current-buffer (find-file arg0)
     (org-babel-tangle)))
 
 (defun gettyped-html-and-tangle ()

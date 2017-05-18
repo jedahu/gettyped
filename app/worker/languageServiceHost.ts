@@ -42,7 +42,7 @@ export class StringHost implements ts.LanguageServiceHost {
 
     getScriptSnapshot(name : string) : ts.IScriptSnapshot {
         const script = this.scripts[name];
-        if (!script) return undefined;
+        if (!script) return undefined as any;
         const text = script.text;
         return {
             getChangeRange: (_old : ts.IScriptSnapshot) => undefined,
@@ -54,7 +54,7 @@ export class StringHost implements ts.LanguageServiceHost {
 
     getScriptVersion(name : string) : string {
         const script = this.scripts[name];
-        if (!script) return undefined;
+        if (!script) return undefined as any;
         return script.version.toString();
     }
 

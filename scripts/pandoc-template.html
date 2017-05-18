@@ -1,0 +1,22 @@
+<article>
+    <header>
+        <h1 class="gt-page-title">$pagetitle$</h1>
+        <dl class="gt-provenance">
+            $for(author-meta)$
+            <dt>author</dt><dd>$author-meta$</dd>
+            $endfor$
+            $if(date-meta)$
+            <dt>date</dt><dd>$date-meta$</dd>
+            $endif$
+            $if(keywords)$
+            <dt>keywords</dt><dd>$for(keywords)$$keywords$$sep$, $endfor$</dd>
+            $endif$
+        </dl>
+    </header>
+    $if(toc)$
+    <nav id="gt-toc">
+        $toc$
+    </nav>
+    $endif$
+    $body$
+</article>

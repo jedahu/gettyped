@@ -1,59 +1,38 @@
-export type Source = {
-    action : "source";
-    module : string;
-    code : string;
+import * as ts from "typescript";
+import {Api as RpcApi} from "ts-rpc/common";
+import {Either} from "fp-ts/lib/Either";
+
+export type Arg = {
+    initialize : {modules : Array<Module>};
+    setModule : Module;
+    evalModule : {moduleName : string};
+}
+
+export type Ret = {
+    initialize : Result<Diagnostics>;
+    setModule : Result<Diagnostics>;
+    evalModule : Result<Either<Diagnostics, any>>;
+}
+
+export type Api = RpcApi<Arg, Ret>;
+
+export type Result<A> = Either<string, A>;
+
+export type Module = {name : string; code : string};
+
+export type DiagnosticMessage = {
+    text : string;
+    category : ts.DiagnosticCategory;
+    code : number;
 };
 
-export type Success<A> = {
-    action : A;
-    status : "ok";
+export type Diagnostic = {
+    length: number;
+    fileName: string;
+    moduleName: string;
+    messages: Array<DiagnosticMessage>;
+    source: string | undefined;
+    start: number;
 };
 
-export type Failure<A> = {
-    action : A;
-    status : "error";
-    error : string;
-};
-
-export type Evaluate = {
-    action : "evaluate";
-    module : string;
-};
-
-export type EvaluateSuccess = {
-    action : "evaluate";
-    module : string;
-    status : "ok";
-    value : any;
-};
-
-export type RuntimeFailure = {
-    action : "evaluate";
-    module : string;
-    status : "error";
-    kind : "runtime";
-    error : string;
-};
-
-export type CompileFailure = {
-    action : "evaluate";
-    module : string;
-    status : "error";
-    kind : "compile";
-    error : string;
-    errors : Array<{module : string, syntax : any, semantics : any}>;
-};
-
-export type EvaluateResponse =
-    EvaluateSuccess | RuntimeFailure | CompileFailure;
-
-export type Initialize = {
-    action : "initialize";
-    modules : Array<[string, string]>;
-};
-
-export type InitializeResponse =
-    Success<"initialize"> | Failure<"initialize">;
-
-export type Action =
-    Initialize | Source | Evaluate;
+export type Diagnostics = Array<Diagnostic>;

@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "alwaysStrict": true,
-        "lib": ["ES6"],
+        "lib": ["es6"],
         "newLine": "lf",
         "noFallthroughCasesInSwitch": true,
         "noImplicitAny": true,
@@ -9,6 +9,6 @@
         "noImplicitThis": true,
         "noUnusedLocals": true,
         "strictNullChecks": true,
-        "target": "ES3"
+        "target": "es5"
     }
 }

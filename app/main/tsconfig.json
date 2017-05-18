@@ -1,10 +1,9 @@
 {
-    "compilerOptions": {
-        "lib": ["ES2015", "DOM"],
-        "allowJs": true,
-        "jsx": "react",
-        "strictNullChecks": false
-    },
     "extends": "../../tsconfig.json",
-    "include": ["./**/*.ts", "../external.d.ts"]
+    "compilerOptions": {
+        "lib": ["es6", "dom"],
+        "jsx": "react",
+        "types": []
+    },
+    "include": ["../../scss/*.scss", "../external.d.ts", "./**/*"]
 }

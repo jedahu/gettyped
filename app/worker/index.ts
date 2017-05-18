@@ -1,9 +1,14 @@
 import * as ts from "typescript";
-import * as api from "./api";
 import {StringHost} from "./languageServiceHost";
 import * as libEs2015 from "../lib/dts-es2015.txt";
 import * as almond from "raw-loader!almond/almond";
 import * as jsonOpts from "../../tsconfig-base.json";
+import {makeApi} from "ts-rpc/worker";
+import * as api from "./api";
+import {either} from "fp-ts";
+
+const {left, right} = either;
+type Either<A, B> = either.Either<A, B>;
 
 const opts = ts.parseJsonConfigFileContent(
     jsonOpts,
@@ -77,112 +82,95 @@ const moduleTransitiveDeps = (module : string) : Array<string> => {
     return uniq([module].concat(go(module))).reverse();
 };
 
-const actions : {[key : string] : Function} = {
-    initialize: ({modules} : api.Initialize) : api.InitializeResponse => {
+const diagnosticMessages =
+    (d: ts.DiagnosticMessageChain)
+        : Array<api.DiagnosticMessage> => {
+        const acc = [];
+        acc.push({ text: d.messageText, code: d.code, category: d.category });
+        while (d.next) {
+            d = d.next;
+            acc.push({ text: d.messageText, code: d.code, category: d.category });
+        }
+        return acc;
+    };
+
+const diagnostic = (d: ts.Diagnostic): api.Diagnostic => ({
+    start: d.start,
+    length: d.length,
+    source: d.source,
+    moduleName: d.file.moduleName,
+    fileName: d.file.fileName,
+    messages:
+        typeof d.messageText === "string"
+        ? [{text: d.messageText, code: d.code, category: d.category}]
+        : diagnosticMessages(d.messageText)
+})
+
+const moduleDiagnostics = (name : string) : api.Diagnostics => {
+    const syntax = lang.getSyntacticDiagnostics(name + ".ts");
+    const semantics = lang.getSemanticDiagnostics(name + ".ts");
+    return syntax.concat(semantics).map(diagnostic);
+}
+makeApi<api.Arg, api.Ret>({
+    initialize: ({modules}, cont) => {
         try {
             host.setScript("lib.es2015.d.ts", libEs2015);
-            modules.forEach(([name, src]) => host.setScript(name + ".ts", src));
-            return {
-                action: "initialize",
-                status: "ok"
-            };
+            modules.forEach(
+                ({name, code}) => host.setScript(name + ".ts", code));
+            const diags =
+                arrayFlatMap(
+                    ({name}) => moduleDiagnostics(name),
+                    modules);
+            cont(right<string, api.Diagnostics>(diags));
         }
         catch (e) {
-            return {
-                action: "initialize",
-                status: "error",
-                error: errorJson(e)
-            };
+            cont(left<string, api.Diagnostics>(errorJson(e)));
         }
     },
-
-    source: ({module, code} : api.Source) : api.Success<"source"> => {
-        host.setScript(module + ".ts", code);
-        return {
-            action: "source",
-            status: "ok"
-        };
+    setModule: ({name, code}, cont) => {
+        host.setScript(name + ".ts", code);
+        cont(right<string, api.Diagnostics>(moduleDiagnostics(name)));
     },
-
-    evaluate: ({module} : api.Evaluate) : api.EvaluateResponse => {
-        let js : string;
+    evalModule: ({moduleName}, cont) => {
+        let js = "";
         try {
             try {
-                const deps = moduleTransitiveDeps(module);
+                const deps = moduleTransitiveDeps(moduleName);
                 const outs = deps.map(m => ({
                     module: m,
-                    errSyntax: lang.getSyntacticDiagnostics(m + ".ts"),
-                    errSemantic: lang.getSemanticDiagnostics(m + ".ts"),
+                    diags: moduleDiagnostics(m),
                     js: lang.getEmitOutput(m + ".ts").
                         outputFiles.
                         map(f => f.text).join("\n")
                 }));
-                const hasErrors =
-                    outs.find(
-                        o => o.errSyntax.length + o.errSemantic.length > 0);
-                if (hasErrors) {
-                    return {
-                        action: "evaluate",
-                        status: "error",
-                        kind: "compile",
-                        module,
-                        error: "tsc errors",
-                        errors: outs.map(
-                            o => ({
-                                module: o.module,
-                                syntax: o.errSyntax,
-                                semantics: o.errSemantic
-                            }))
-                    };
+                const diags = arrayFlatMap(x => x.diags, outs);
+                if (diags.length > 0) {
+                    cont(
+                        right<string, Either<api.Diagnostics, any>>(
+                            left<api.Diagnostics, any>(diags)));
                 }
-                js = deps.map(
-                    m => lang.getEmitOutput(m + ".ts").
-                        outputFiles.map(f => f.text).join("\n")
-                ).join("\n");
+                else {
+                    js = deps.map(
+                        m => lang.getEmitOutput(m + ".ts").
+                            outputFiles.map(f => f.text).join("\n")
+                    ).join("\n");
+                }
             }
             catch (error) {
-                return {
-                    action: "evaluate",
-                    status: "error",
-                    kind: "compile",
-                    module,
-                    error: errorJson(error),
-                    errors: []
-                };
+                cont(left<string, Either<api.Diagnostics, any>>(errorJson(error)));
             }
-            return {
-                action: "evaluate",
-                status: "ok",
-                module,
-                value: new Function(`
-                    ${almond};
-                    ${js};
-                    return require('${module}').__eval();
-                `)()
-            };
+            cont(
+                right<string, Either<api.Diagnostics, any>>(
+                    right<api.Diagnostics, any>(
+                        new Function(`
+                            ${almond};
+                            ${js};
+                            return require('${moduleName}').__eval();
+                        `)()
+                    )));
         }
         catch (error) {
-            return {
-                action: "evaluate",
-                status: "error",
-                kind: "runtime",
-                module,
-                error: errorJson(error)
-            };
+            cont(left<string, Either<api.Diagnostics, any>>(errorJson(error)));
         }
     }
-};
-
-onmessage = (e : any) => {
-    const data : api.Action = e.data;
-    const action = actions[data.action];
-    if (action) {
-        (<any>postMessage)(action(data));
-    }
-    else {
-        (<any>postMessage)({
-            status: "missing",
-            error: "no such action " + data.action
-        });
-    }
-};
+});

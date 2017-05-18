@@ -13,8 +13,18 @@ declare module "ace" {
     export = x;
 }
 
+declare module "react-monaco-editor" {
+    const x : any;
+    export default x;
+}
+
 declare module "raw-loader!*" {
     const x : string;
+    export = x;
+}
+
+declare module "worker-loader*" {
+    const x : any;
     export = x;
 }
 

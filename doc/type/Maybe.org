@@ -1,0 +1,232 @@
+#+TITLE: Maybe - null done right
+#+AUTHOR: Jeremy Hughes
+#+EMAIL: jedahu@gmail.com
+#+DATE: [2017-05-17 Wed]
+
+* Motivation
+
+- Handle optional values without guessing and without exceptions
+- Maintain type invariants in smart constructors
+
+The ~Maybe~ type guarantees exception free and guess free optional value handling
+by providing only one function for getting at the optional value, a function
+that requires function arguments that handle both present and absent states.
+
+* Info
+- type :: ~Maybe<A>~
+- impl :: [[https://hackage.haskell.org/package/base/docs/Data-Maybe.html][Haskell]]([[https://hackage.haskell.org/package/base/docs/src/Data.Maybe.html][src]]), [[https://doc.rust-lang.org/std/option/][Rust]]([[https://doc.rust-lang.org/src/core/up/src/libcore/option.rs.html][src]]), [[https://msdn.microsoft.com/en-us/visualfsharpdocs/conceptual/core.option-module-%5Bfsharp%5D][F#]]([[https://github.com/fsharp/fsharp/blob/master/src/fsharp/FSharp.Core/option.fs][src]])
+- docs :: [[https://wiki.haskell.org/Maybe][Haskell wiki]], [[https://fsharpforfunandprofit.com/posts/the-option-type/][F# post]], [[https://en.wikipedia.org/wiki/Option_type][Wikipedia]]
+
+* Minimal API
+
+- A nullary constructor
+- A 1-ary constructor
+- A function that folds over the constructor cases
+
+#+BEGIN_SRC ts
+class Maybe<A> {
+    static nothing : Maybe<A>;
+
+    static just(a : A) : Maybe<A>;
+
+    fold<B>(nothing : () => B, just : (A) => B) : B;
+}
+#+END_SRC
+
+This API provides no way to dereference the Maybe-wrapped value directly. ~fold~
+ensures that the ~Nothing~ case is handled.
+
+* Minimal implementation
+
+#+BEGIN_SRC ts :name t :module demo/data/maybe/minimal
+export class Maybe<A> {
+    static nothing<A>() : Maybe<A> {
+        return new Maybe<A>(null);
+    }
+
+    static just<A>(a : A) : Maybe<A> {
+        return new Maybe({just: a});
+    }
+
+    fold<B>(nothing: () => B, just: (a:A) => B): B {
+        return this.value === null ? nothing() : just(this.value.just);
+    }
+
+    private readonly value : null | {just : A};
+
+    private constructor(value : null | {just : A}) {
+        this.value = value;
+    }
+
+    protected [Symbol.species] : "f419bf14-c1e9-43f5-92c3-ac944652e72b";
+}
+#+END_SRC
+
+* Extended API
+
+#+BEGIN_SRC ts
+or(other : () => Maybe<A>) : Maybe<A> {
+    return this.fold(other, _ => this);
+}
+
+valueOr(other : () => A) : A {
+    return this.fold(other, a => a);
+}
+
+map<B>(f : (a:A) => B) : Maybe<B> {
+    return this.fold(() => Maybe.nothing<B>(), a => Maybe.just<B>(f(a)));
+}
+
+flatMap<B>(f : (a:A) => Maybe<B>) : Maybe<B> {
+    return this.fold(() => Maybe.nothing<B>(), f);
+}
+
+zip<B>(other : Maybe<B>) : Maybe<[A, B]> {
+    return this.flatMap(a => other.map(b => <[A, B]>[a, b]));
+}
+
+justAct(f : (a:A) => void) : void {
+    this.fold(() => {}, f);
+}
+
+static catchError<A>(f : () => A) : Maybe<A> {
+    try {
+        return Maybe.just(f());
+    }
+    catch (_) {
+        return Maybe.nothing<A>();
+    }
+}
+
+static when<A>(test : boolean, val : () => A) : Maybe<A> {
+    return test ? Maybe.just(val()) : Maybe.nothing<A>();
+}
+
+static unless<A>(test : boolean, val : () => A) : Maybe<A> {
+    return Maybe.when(!test, val);
+}
+#+END_SRC
+
+* Extended implementation
+
+#+BEGIN_SRC ts :name t :module demo/data/maybe/extended
+#+END_SRC
+
+* Maybe vs null
+
+Assuming the following values:
+
+#+BEGIN_SRC ts :name t :module demo/data/maybe/null
+export class Name {
+    first : string;
+    last : string;
+
+    constructor(first : string, last : string) {
+        this.first = first;
+        this.last = last;
+    }
+}
+
+export const absent = () : string => "nobody\n";
+export const present = (n : Name) : string => `${n.first} ${n.last}\n`;
+#+END_SRC
+
+A typical null-check,
+#+BEGIN_SRC ts :module demo/data/maybe/null/typicalCheck
+import * as t from "demo/data/maybe/null";
+
+const line = (n : t.Name) : string =>
+      n === null ? t.absent() : t.present(n);
+
+const a = line(new t.Name("Lewis", "Caroll"));
+const b = line(null);
+$GT.show(a + b);
+#+END_SRC
+
+exhibits a lack of type safety in two ways:
+
+*Assumption.* The programmer assumes ~n~ is not ~null~ and doesn’t write the null
+check.
+
+#+BEGIN_SRC ts :module demo/re/data/maybe/null/notNullAssumption
+import * as t from "demo/data/maybe/null";
+
+const line = (n : t.Name) : string =>
+      t.present(n);
+
+const a = line(new t.Name("Lewis", "Caroll"));
+const b = line(null);
+$GT.show(a + b);
+#+END_SRC
+
+*Boolean blindness.* The compiler doesn’t stop accidental dereferencing, as in
+this transposition.
+#+BEGIN_SRC ts :module demo/re/data/maybe/null/accidentalDereference
+import * as t from "demo/data/maybe/null";
+
+const line = (n : t.Name) : string =>
+      n === null ? t.present(n) : t.absent();
+
+const a = line(new t.Name("Lewis", "Caroll"));
+const b = line(null);
+$GT.show(a + b);
+#+END_SRC
+
+Boolean blindness is [[bb][well described by Robert Harper]]. Here’s the money quote:
+
+#+LINK: bb https://existentialtype.wordpress.com/2011/03/15/boolean-blindness/
+     
+#+BEGIN_QUOTE
+Another harm is the condition of Boolean blindness alluded to earlier. Suppose
+that I evaluate the expression e=e’ to test whether e and e’ are equal. I have
+in my hand a bit. The bit itself has no intrinsic meaning; I must associate a
+provenance with that bit in order to give it meaning. “This bit being true
+means that e and e’ are equal, whereas this other bit being false means that
+some other two expressions are not equal.” Keeping track of this information
+(or attempting to recover it using any number of program analysis techniques) is
+notoriously difficult. The only thing you can do with a bit is to branch on it,
+and pretty soon you’re lost in a thicket of if-the-else’s, and you lose track
+of what’s what. Evolve the program a little, and you’re soon out to sea, and
+find yourself in need of sat solvers to figure out what the hell is going on.
+#+END_QUOTE
+
+~Maybe~ solves both issues.
+#+BEGIN_SRC ts :module demo/data/maybe/null/solved
+import * as m from "data/maybe";
+import * as t from "demo/data/maybe/null";
+
+const line = (n : m.Maybe<t.Name>) : string =>
+      n.fold(t.absent, t.present);
+
+const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+const b = line(m.Maybe.nothing<t.Name>());
+$GT.show(a + b);
+#+END_SRC
+
+*Assumption.* The programmer cannot get at the value of a ~Maybe~ without going
+through ~Maybe.fold~.
+#+BEGIN_SRC ts :module demo/ce/data/maybe/null/forcedToHandle
+import * as m from "data/maybe";
+import * as t from "demo/data/maybe/null";
+
+const line = (n : m.Maybe<t.Name>) : string =>
+      t.present(n);
+
+const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+const b = line(m.Maybe.nothing<t.Name>());
+$GT.show(a + b);
+#+END_SRC
+
+*Boolean blindness.* ~Maybe.fold~ provides a value only to the ~just~ case, so
+accidental transposition results in a compile time error:
+#+BEGIN_SRC ts :module demo/ce/data/maybe/null/transpositionError
+import * as m from "data/maybe";
+import * as t from "demo/data/maybe/null";
+
+const line = (n : m.Maybe<t.Name>) : string =>
+      n.fold(t.present, t.absent)
+
+const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+const b = line(m.Maybe.nothing<t.Name>());
+$GT.show(a + b);
+#+END_SRC
