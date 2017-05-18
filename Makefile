@@ -1,13 +1,19 @@
 SHELL = /usr/bin/env bash -O globstar
 NBIN = $(shell yarn bin)
 
-APP_SRC := $(shell ls app/main/**/*)
-WORKER_SRC := $(shell ls app/worker/**/*)
-ORG_SRC := $(shell ls doc/**/*.org)
-ORG_HTML := $(ORG_SRC:%.org=site/%.html)
-PANDOC_DEPS := $(shell ls scripts/pandoc-*)
+SRC := $(shell find src -type f)
+DEMO := $(shell find demo -type f)
+DOC := $(shell find doc -type f)
+ORG := $(shell find doc -type f -iname '*.org')
 
-site/doc/typenav: doc/typenav
+SITE_SRC := $(SRC:%=site/%)
+SITE_DEMO := $(DEMO:%=site/%)
+SITE_DOC := $(DOC:%=site/%)
+SITE_HTML := $(ORG:%.org=site/%.html)
+
+PANDOC_DEPS := $(shell find script -type -f -iname 'pandoc-*')
+
+site/doc/%: doc/%
 	mkdir -p $(dir $@)
 	cp $< $@
 
@@ -24,11 +30,13 @@ site/%.html: %.org $(PANDOC_DEPS)
 		--filter scripts/pandoc-site-filter.js \
 		$<
 
-out/app/worker/index.js: $(WORKER_SRC)
-	$(NBIN)/tsc -p app/worker/tsconfig.json || (rm $@ && exit 1)
+site/src/%: src/%
+	mkdir -p $(dir $@)
+	cp $< $@
 
-out/app/main/index.js: $(APP_SRC)
-	$(NBIN)/tsc -p app/main/tsconfig.json || (rm $@ && exit 1)
+site/demo/%: demo/%
+	mkdir -p $(dir $@)
+	cp $< $@
 
 site/worker.js: out/app/worker/index.js
 	mkdir -p site
@@ -50,10 +58,10 @@ worker: site/worker.js
 app: site/app.js
 
 .PHONY: html
-html: $(ORG_HTML)
+html: $(SITE_HTML)
 
 .PHONY: site
-site: html statics site/doc/typenav
+site: html statics $(SITE_SRC) $(SITE_DEMO) $(SITE_DOC)
 # site: html worker app statics site/doc/typenav
 
 .PHONY: webpack

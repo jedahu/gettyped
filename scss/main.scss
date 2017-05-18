@@ -1,3 +1,4 @@
+$gt-nav-bar-height: 50px;
 $gt-nav-drawer-width: 26ex;
 $gt-main-left-margin: 30ex;
 $gt-main-min-width: 50ex;
@@ -10,7 +11,7 @@ $gt-main-min-width: 50ex;
 
 #gt-main {
     position: absolute;
-    height: 100vw;
+    height: calc(100vh - #{$gt-nav-bar-height});
     margin-left: $gt-main-left-margin;
     min-width: $gt-main-min-width;
     width: calc(100% - #{$gt-main-left-margin});
@@ -18,9 +19,18 @@ $gt-main-min-width: 50ex;
 
 #gt-main-article {
     overflow-y: scroll;
+
+    [rundoc-module]:hover:before {
+        content: "Click to load in the editor";
+        display: block;
+        text-align: right;
+        float: right;
+        cursor: pointer;
+    }
 }
 
 #gt-main-editor {
+    box-shadow: black -1px 2px 16px;
 }
 
 .Resizer {

@@ -3,23 +3,35 @@ import NavDrawer from "./NavDrawer";
 import NavBar from "./NavBar";
 import {Location} from "history";
 import {history} from "./history";
-import Editor from "./editor";
+import Editor from "./editor/pane";
 import * as SplitPane from "react-split-pane";
 
 const global = window;
 
 type Props = {
+    monaco : typeof monaco;
     showNav : boolean;
     article? : string | JSX.Element;
     editorHeight : number;
+    currentPath : string;
 };
 
-export class App extends React.Component<Props, Props> {
+type State = Props & {
+    paths : Array<string>;
+    editorWidth : number;
+};
+
+export class App extends React.Component<Props, State> {
     historyUnlisten : () => void;
+    articleDom : HTMLElement;
 
     constructor(props : Props) {
         super(props)
-        this.state = {...props, unregister: () => {}};
+        this.state = {
+            ...props,
+            paths: [props.currentPath],
+            editorWidth: 0
+        };
     }
 
     toggleNav = () => {
@@ -59,10 +71,32 @@ export class App extends React.Component<Props, Props> {
     componentDidMount = () => {
         this.historyUnlisten = history.listen(this.historyListener);
         this.routePath(history.location.pathname);
+        const main = document.getElementById("gt-main") as HTMLElement;
+        const width = main.offsetWidth;
+        this.setState({editorWidth: width});
+        this.articleDom.addEventListener("click", this.moduleClickListener);
     }
 
     componentWillUnmount = () => {
         this.historyUnlisten();
+        this.articleDom.removeEventListener("click", this.moduleClickListener);
+    }
+
+    moduleClickListener = (e : MouseEvent) => {
+        if (e.target instanceof HTMLElement &&
+            e.target.hasAttribute("rundoc-module")) {
+            const module = e.target.getAttribute("rundoc-module");
+            const path = `/${module}.ts`;
+            if (this.state.paths.indexOf(path) >= 0) {
+                this.setState({currentPath: path});
+            }
+            else {
+                this.setState({
+                    paths: this.state.paths.concat([path]),
+                    currentPath: path
+                });
+            }
+        }
     }
 
     resizeEditor = (height : number) => {
@@ -85,16 +119,20 @@ export class App extends React.Component<Props, Props> {
                         split="horizontal"
                         primary="second"
                         defaultSize={eh}
-                        onDragFinished={this.resizeEditor}>
-                        <Article
-                            article={article}
-                            height={`calc(100vw - ${eh}px)`}
-                        />
+                        onChange={this.resizeEditor}>
+                        <div ref={a => { this.articleDom = a; }}>
+                            <Article
+                                article={article}
+                                height={`calc(100vh - ${eh}px - 50px)`}
+                            />
+                        </div>
                         <Editor
-                            language="typescript"
-                            value="hellow"
+                            id="gt-main-editor"
+                            monaco={this.props.monaco}
+                            paths={this.state.paths}
+                            currentPath={this.state.currentPath}
                             height={this.state.editorHeight}
-                            onChange={_ => {}}
+                            width={this.state.editorWidth}
                         />
                     </SplitPane>
                 </div>

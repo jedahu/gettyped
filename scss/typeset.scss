@@ -132,6 +132,10 @@ $typeset-adjust-first-margin: true !default;
     padding: .1em .2em;
   }
 
+  pre > code {
+      padding: 0;
+  }
+
   dfn {
     /* no style */
   }

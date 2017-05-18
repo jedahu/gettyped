@@ -5,5 +5,10 @@
         "jsx": "react",
         "types": []
     },
-    "include": ["../../scss/*.scss", "../external.d.ts", "./**/*"]
+    "include": [
+        "../../node_modules/monaco-editor/monaco.d.ts",
+        "../../scss/*.scss",
+        "../external.d.ts",
+        "./**/*"
+    ]
 }
