@@ -33,6 +33,11 @@ declare module "*.txt" {
     export = x;
 }
 
+declare module "*.md" {
+    const x : string;
+    export = x;
+}
+
 declare module "*.json" {
     const x : any;
     export = x;

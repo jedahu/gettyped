@@ -11,7 +11,7 @@ SITE_DEMO := $(DEMO:%=site/%)
 SITE_DOC := $(DOC:%=site/%)
 SITE_HTML := $(ORG:%.org=site/%.html)
 
-PANDOC_DEPS := $(shell find script -type -f -iname 'pandoc-*')
+PANDOC_DEPS := $(shell find scripts -type f -iname 'pandoc-*')
 
 site/doc/%: doc/%
 	mkdir -p $(dir $@)
@@ -70,7 +70,7 @@ webpack: html
 
 .PHONY: webpack-dev
 webpack-dev: html
-	$(NBIN)/webpack-dev-server --hot --watch
+	NODE_ENV=development $(NBIN)/webpack-dev-server --hot --watch
 
 .PHONY: serve
 serve:

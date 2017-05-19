@@ -1,15 +1,12 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as injectTapEventPlugin from "react-tap-event-plugin";
+import {FocusStyleManager} from "@blueprintjs/core";
 
 import "normalize.css/normalize.css";
 import "@blueprintjs/core/dist/blueprint.css";
-import {FocusStyleManager} from "@blueprintjs/core";
-
 import "../../scss/typeset.scss";
 import "../../scss/main.scss";
-
-import {App} from "./index";
 
 type Global = typeof window & {require : any};
 
@@ -21,12 +18,28 @@ FocusStyleManager.onlyShowFocusOnTabs();
 global.addEventListener(
     "load",
     () => global.require(["vs/editor/editor.main"], () => {
+        const App = require("./index").App;
+
+        const m = monaco;
+        m.languages.typescript.typescriptDefaults.setCompilerOptions({
+            target: m.languages.typescript.ScriptTarget.ES2016,
+            allowNonTsExtensions: false,
+            moduleResolution: m.languages.typescript.ModuleResolutionKind.NodeJs,
+            module: m.languages.typescript.ModuleKind.AMD,
+            noEmit: false,
+            baseUrl: "/",
+            typeRoots: ["node_modules/@types"]
+        });
+        m.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: false,
+            noSyntaxValidation: false
+        });
+
         const elem = document.createElement("div");
         elem.setAttribute("id", "gt-app");
         document.body.appendChild(elem);
         ReactDOM.render(
             <App
-                monaco={monaco}
                 showNav={true}
                 editorHeight={200}
                 currentPath="/demo/welcome.ts"

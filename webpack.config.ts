@@ -4,13 +4,15 @@ const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-const extractBundles = (bs : Array<any>) =>
-      bs.map(b => new webpack.optimize.CommonsChunkPlugin(b));
+const DEV = process.env.NODE_ENV === "development";
 
+const extractBundles = (bs : Array<any>) =>
+       bs.map(b => new webpack.optimize.CommonsChunkPlugin(b));
+ 
 const extractCss = new ExtractTextPlugin("styles.css");
 const extractSass = new ExtractTextPlugin({
     filename: "[name].[contenthash].css",
-    disable: process.env.NODE_ENV === "development"
+    disable: false //DEV
 });
 
 module.exports = {
@@ -51,7 +53,7 @@ module.exports = {
                 ]
             },
             {
-                test: /\.txt$/,
+                test: /\.(txt|md)$/,
                 loader: "raw-loader"
             },
             {
@@ -65,52 +67,52 @@ module.exports = {
                         loader: "css-loader"
                     }, {
                         loader: "sass-loader"
-                    }],
-                    fallback: "style-loader"
-                })
-            },
-            {
-                test: /\.eot|ttf|woff$/,
-                use: "file-loader?name=fonts/[name].[ext]"
-            }
-        ]
-    },
+                   }],
+                   fallback: "style-loader"
+               })
+           },
+           {
+               test: /\.eot|ttf|woff$/,
+               use: "file-loader?name=fonts/[name].[ext]"
+           }
+       ]
+   },
 
-    plugins: [
-        extractCss,
-        extractSass,
-        new HtmlWebpackPlugin({
-            title: "Get Typed",
-            inject: "head",
-            hash: true,
-            cache: true,
-            showErrors: false,
-            xhtml: false,
-            filename: "index.html",
-            template: "index.ejs"
-        }),
-        new CopyWebpackPlugin([{
-            from: "node_modules/monaco-editor/min/vs",
-            to: "vs"
-        }])
-    ].concat(
-        extractBundles([{
-            name: "vendor",
-            minChunks: ({resource} : {resource : string}) =>
-                resource &&
-                resource.indexOf("node_modules") >= 0 &&
-                resource.endsWith(".js")
-        }])),
+   plugins: [
+       extractCss,
+       extractSass,
+       new HtmlWebpackPlugin({
+           title: "Get Typed",
+           inject: "head",
+           hash: true,
+           cache: true,
+           showErrors: false,
+           xhtml: false,
+           filename: "index.html",
+           template: "index.ejs"
+       }),
+       new CopyWebpackPlugin([{
+           from: `node_modules/monaco-editor/${DEV ? "dev" : "min"}/vs`,
+           to: "vs"
+       }])
+   ].concat(
+       extractBundles([{
+           name: "vendor",
+           minChunks: ({resource} : {resource : string}) =>
+               resource &&
+               resource.indexOf("node_modules") >= 0 &&
+               resource.endsWith(".js")
+       }])),
 
-    externals: {
-    },
+   externals: {
+   },
 
-    node: {
-        fs: "empty"
-    },
+   node: {
+       fs: "empty"
+   },
 
-    devServer: {
-        contentBase: "./site",
-        historyApiFallback: true
-    }
-};
+   devServer: {
+       contentBase: "./site",
+       historyApiFallback: true
+   }
+}

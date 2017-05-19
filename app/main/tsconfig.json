@@ -3,7 +3,7 @@
     "compilerOptions": {
         "lib": ["es6", "dom"],
         "jsx": "react",
-        "types": []
+        "types": ["node"]
     },
     "include": [
         "../../node_modules/monaco-editor/monaco.d.ts",

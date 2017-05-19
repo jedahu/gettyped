@@ -9,7 +9,6 @@ import * as SplitPane from "react-split-pane";
 const global = window;
 
 type Props = {
-    monaco : typeof monaco;
     showNav : boolean;
     article? : string | JSX.Element;
     editorHeight : number;
@@ -128,8 +127,6 @@ export class App extends React.Component<Props, State> {
                         </div>
                         <Editor
                             id="gt-main-editor"
-                            monaco={this.props.monaco}
-                            paths={this.state.paths}
                             currentPath={this.state.currentPath}
                             height={this.state.editorHeight}
                             width={this.state.editorWidth}
