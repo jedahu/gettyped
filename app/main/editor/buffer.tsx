@@ -13,6 +13,7 @@ type Props = {
     model : Model;
     viewState? : ViewState;
     getViewState? : (f : () => ViewState) => void;
+    setModel : (f : (m : Model) => void) => void;
 };
 
 export default class EditorBuffer extends React.Component<Props, {}> {
@@ -52,6 +53,9 @@ export default class EditorBuffer extends React.Component<Props, {}> {
         });
         if (this.props.getViewState) {
             this.props.getViewState(() => this.editor.saveViewState());
+        }
+        if (this.props.setModel) {
+            this.props.setModel(m => this.editor.setModel(m));
         }
 
         const onChange = this.props.onChange;

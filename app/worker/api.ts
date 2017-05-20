@@ -6,12 +6,19 @@ export type Arg = {
     initialize : {modules : Array<Module>};
     setModule : Module;
     evalModule : {moduleName : string};
+    dependencies : {
+        path : string;
+        code : string;
+        target : ts.ScriptTarget;
+        kind : ts.ScriptKind;
+    };
 }
 
 export type Ret = {
     initialize : Result<Diagnostics>;
     setModule : Result<Diagnostics>;
     evalModule : Result<Either<Diagnostics, any>>;
+    dependencies : Array<string>;
 }
 
 export type Api = RpcApi<Arg, Ret>;

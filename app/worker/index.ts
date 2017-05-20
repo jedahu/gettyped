@@ -58,9 +58,9 @@ const uniq = (xs : Array<string>) => {
 const arrayFlatMap = <A, B>(f : (a:A) => Array<B>, xs : Array<A>) : Array<B> =>
       <Array<B>>[].concat.apply([], xs.map(f));
 
-const moduleDeps = (module : string) : Array<string> => {
+const codeDeps = ({path, code, target, kind} : api.Arg["dependencies"]) : Array<string> => {
     const deps : Array<string> = [];
-    const node : ts.SourceFile = lang.getProgram().getSourceFile(module + ".ts");
+    const node : ts.SourceFile = ts.createSourceFile(path, code, target, true, kind);
     const go = (node : ts.Node) => {
         if (isImportDeclaration(node)
             && isStringLiteral(node.moduleSpecifier)
@@ -72,6 +72,14 @@ const moduleDeps = (module : string) : Array<string> => {
     go(node);
     return deps;
 };
+
+const moduleDeps = (module : string) : Array<string> =>
+    codeDeps({
+        path: module,
+        code: lang.getProgram().getSourceFile(module + ".ts").getText(),
+        target: ts.ScriptTarget.ES5,
+        kind: ts.ScriptKind.TS
+    });
 
 const moduleTransitiveDeps = (module : string) : Array<string> => {
     const go = (m : string) => {
@@ -112,6 +120,8 @@ const moduleDiagnostics = (name : string) : api.Diagnostics => {
     return syntax.concat(semantics).map(diagnostic);
 }
 makeApi<api.Arg, api.Ret>({
+    dependencies: (arg, cont) =>
+        cont(codeDeps(arg)),
     initialize: ({modules}, cont) => {
         try {
             host.setScript("lib.es2015.d.ts", libEs2015);

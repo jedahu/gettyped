@@ -8,27 +8,29 @@ import "@blueprintjs/core/dist/blueprint.css";
 import "../../scss/typeset.scss";
 import "../../scss/main.scss";
 
+import tsconfig from "./tsconfig";
+
 type Global = typeof window & {require : any};
 
 const global : Global = window as any;
 
-injectTapEventPlugin();
-FocusStyleManager.onlyShowFocusOnTabs();
-
 global.addEventListener(
     "load",
     () => global.require(["vs/editor/editor.main"], () => {
+        injectTapEventPlugin();
+        FocusStyleManager.onlyShowFocusOnTabs();
+
         const App = require("./index").App;
 
         const m = monaco;
         m.languages.typescript.typescriptDefaults.setCompilerOptions({
-            target: m.languages.typescript.ScriptTarget.ES2016,
-            allowNonTsExtensions: false,
-            moduleResolution: m.languages.typescript.ModuleResolutionKind.NodeJs,
-            module: m.languages.typescript.ModuleKind.AMD,
+            ...tsconfig,
             noEmit: false,
             baseUrl: "/",
-            typeRoots: ["node_modules/@types"]
+            typeRoots: ["node_modules/@types"],
+            allowNonTsExtensions: false,
+            jsx: undefined as any,
+            paths: undefined as any
         });
         m.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
             noSemanticValidation: false,
