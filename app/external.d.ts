@@ -18,6 +18,11 @@ declare module "react-monaco-editor" {
     export default x;
 }
 
+declare module "selectivity/react" {
+    const x : any;
+    export = x;
+}
+
 declare module "raw-loader!*" {
     const x : string;
     export = x;

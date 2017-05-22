@@ -7,7 +7,7 @@ type ViewState = monaco.editor.IEditorViewState;
 type MEditor = monaco.editor.IStandaloneCodeEditor;
 
 type Props = {
-    onChange? : (newValue: string) => any;
+    onValidStateChange? : (isValid : boolean) => any;
     height : number;
     width : number;
     model : Model;
@@ -43,10 +43,6 @@ export default class EditorBuffer extends React.Component<Props, {}> {
     }
 
     componentDidMount() {
-        // Monaco requires the AMD module loader to be present on the page. It is not yet
-        // compatible with ES6 imports. Once that happens, we can get rid of this.
-        // See https://github.com/Microsoft/monaco-editor/issues/18
-
         this.editor = monaco.editor.create(this.domPeer, {
             model: this.props.model,
             lineNumbers: "off"
@@ -58,11 +54,12 @@ export default class EditorBuffer extends React.Component<Props, {}> {
             this.props.setModel(m => this.editor.setModel(m));
         }
 
-        const onChange = this.props.onChange;
-        if (onChange) {
-            this.editor.onDidChangeModelContent(event => {
-                onChange(this.editor.getValue());
-            });
+        const onValidStateChange = this.props.onValidStateChange;
+        if (onValidStateChange) {
+            this.editor.onDidChangeModelDecorations(
+                _ => onValidStateChange(
+                    !this.editor.getModel().getAllDecorations().find(
+                        d => d.isForValidation)));
         }
 
         setTimeout(() => {

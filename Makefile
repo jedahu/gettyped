@@ -70,7 +70,9 @@ webpack: html
 
 .PHONY: webpack-dev
 webpack-dev: html
-	NODE_ENV=development $(NBIN)/webpack-dev-server --hot --watch
+	NODE_ENV=development \
+	$(NBIN)/nodemon --watch webpack.config.ts \
+	$(NBIN)/webpack-dev-server --hot --watch
 
 .PHONY: serve
 serve:

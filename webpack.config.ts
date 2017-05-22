@@ -3,6 +3,7 @@ const webpack = require("webpack");
 const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
 
 const DEV = process.env.NODE_ENV === "development";
 
@@ -82,6 +83,7 @@ module.exports = {
    plugins: [
        extractCss,
        extractSass,
+       new FaviconsWebpackPlugin("./logo.png"),
        new HtmlWebpackPlugin({
            title: "Get Typed",
            inject: "head",

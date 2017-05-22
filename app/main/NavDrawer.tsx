@@ -5,17 +5,9 @@ import {history} from "./history";
 
 const global = window;
 
-type NavItem = {id : string, text : string, subList : NavItems};
-type NavItems = Array<NavItem>;
-
 const getNavText = () : Promise<string> =>
     global.fetch("doc/typenav").
            then(r => r.text());
-
-interface NavNode extends ITreeNode {
-    target : string;
-    childNodes : Array<NavNode> | undefined;
-}
 
 type TypesListState = {
     typeNames: Array<string>;
@@ -24,8 +16,6 @@ type TypesListState = {
 };
 
 class TypesList extends React.Component<{}, TypesListState> {
-    linearNav : Array<NavNode>;
-
     constructor() {
         super();
         this.state = {typeNames: [], currentName: null, unregister: () => {}};
@@ -38,7 +28,7 @@ class TypesList extends React.Component<{}, TypesListState> {
         });
     };
 
-    showTypePage = (node : NavNode) =>
+    showTypePage = (node : ITreeNode) =>
         history.push({
             pathname: "type:" + node.label
         });

@@ -18,7 +18,10 @@ type Props = {
 type State = Props & {
     paths : Array<string>;
     editorWidth : number;
+    editorDisplay : "up" | "down";
 };
+
+const barHeight = 50;
 
 export class App extends React.Component<Props, State> {
     historyUnlisten : () => void;
@@ -29,7 +32,8 @@ export class App extends React.Component<Props, State> {
         this.state = {
             ...props,
             paths: [props.currentPath],
-            editorWidth: 0
+            editorWidth: 0,
+            editorDisplay: "up"
         };
     }
 
@@ -37,6 +41,11 @@ export class App extends React.Component<Props, State> {
         this.setState({showNav: !this.state.showNav});
     }
 
+    onToggleDisplay = (state : "up" | "down") =>
+        this.setState({editorDisplay: state});
+
+    onPathChange = (path : string) =>
+        this.setState({currentPath: path});
 
     goHome = () => history.push({pathname: "/"});
 
@@ -104,7 +113,9 @@ export class App extends React.Component<Props, State> {
 
     render() {
         const article = this.state.article;
-        const eh = this.state.editorHeight;
+        const up = this.state.editorDisplay === "up";
+        const deh = this.state.editorHeight;
+        const eh = up ? deh : barHeight;
         return (
             <div>
                 <NavBar
@@ -117,7 +128,9 @@ export class App extends React.Component<Props, State> {
                     <SplitPane
                         split="horizontal"
                         primary="second"
-                        defaultSize={eh}
+                        defaultSize={deh}
+                        size={eh}
+                        allowResize={up}
                         onChange={this.resizeEditor}>
                         <div ref={a => { this.articleDom = a; }}>
                             <Article
@@ -128,8 +141,11 @@ export class App extends React.Component<Props, State> {
                         <Editor
                             id="gt-main-editor"
                             currentPath={this.state.currentPath}
+                            display={this.state.editorDisplay}
                             height={this.state.editorHeight}
                             width={this.state.editorWidth}
+                            onPathChange={this.onPathChange}
+                            onToggleDisplay={this.onToggleDisplay}
                         />
                     </SplitPane>
                 </div>

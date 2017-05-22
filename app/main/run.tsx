@@ -44,7 +44,7 @@ global.addEventListener(
             <App
                 showNav={true}
                 editorHeight={200}
-                currentPath="/demo/welcome.ts"
+                currentPath="/welcome.md"
             />,
             elem);
     }));
