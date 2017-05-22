@@ -1,20 +1,17 @@
-$gt-nav-bar-height: 50px;
-$gt-nav-drawer-width: 26ex;
-$gt-main-left-margin: 30ex;
-$gt-main-min-width: 50ex;
+$gt-noNavMainLeftMargin: $gt-mainLeftMargin - $gt-navDrawerWidth;
 
 #gt-nav-drawer {
     position: absolute;
-    width: $gt-nav-drawer-width;
+    width: $gt-navDrawerWidth;
     box-shadow: black -2px -8px 11px 0;
 }
 
 #gt-main {
     position: absolute;
-    height: calc(100vh - #{$gt-nav-bar-height});
-    margin-left: $gt-main-left-margin;
-    min-width: $gt-main-min-width;
-    width: calc(100% - #{$gt-main-left-margin});
+    height: calc(100vh - #{$gt-navBarHeight});
+    margin-left: $gt-mainLeftMargin;
+    min-width: $gt-mainMinWidth;
+    width: calc(100% - #{$gt-mainLeftMargin});
 }
 
 #gt-main-article {
@@ -31,6 +28,13 @@ $gt-main-min-width: 50ex;
 
 #gt-main-editor {
     box-shadow: black -1px 2px 16px;
+}
+
+.gt-hiddenNav {
+    #gt-main {
+        margin-left: $gt-noNavMainLeftMargin;
+        width: calc(100% - #{$gt-noNavMainLeftMargin});
+    }
 }
 
 .Resizer {

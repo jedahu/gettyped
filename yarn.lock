@@ -3197,7 +3197,7 @@ loader-utils@^0.2.11, loader-utils@^0.2.14, loader-utils@^0.2.15, loader-utils@^
     json5 "^0.5.0"
     object-assign "^4.0.1"
 
-loader-utils@^1.0.1, loader-utils@^1.0.2, loader-utils@^1.1.0:
+loader-utils@^1.0.1, loader-utils@^1.0.2, loader-utils@^1.0.3, loader-utils@^1.1.0:
   version "1.1.0"
   resolved "https://registry.npmjs.org/loader-utils/-/loader-utils-1.1.0.tgz#c98aef488bcceda2ffb5e2de646d6a754429f5cd"
   dependencies:
@@ -3252,7 +3252,7 @@ lodash.assign@^4.2.0:
   version "4.2.0"
   resolved "https://registry.npmjs.org/lodash.assign/-/lodash.assign-4.2.0.tgz#0d99f3ccd7a6d261d19bdaeb9245005d285808e7"
 
-lodash.camelcase@^4.3.0:
+lodash.camelcase@^4.1.1, lodash.camelcase@^4.3.0:
   version "4.3.0"
   resolved "https://registry.npmjs.org/lodash.camelcase/-/lodash.camelcase-4.3.0.tgz#b28aa6288a2b9fc651035c7711f65ab6190331a6"
 
@@ -3763,7 +3763,7 @@ node-rest-client@^1.5.1:
     debug "~2.2.0"
     xml2js ">=0.2.4"
 
-node-sass@^4.5.3:
+node-sass@^4.5.0, node-sass@^4.5.3:
   version "4.5.3"
   resolved "https://registry.npmjs.org/node-sass/-/node-sass-4.5.3.tgz#d09c9d1179641239d1b97ffc6231fdcec53e1568"
   dependencies:
@@ -5241,6 +5241,15 @@ sass-loader@^6.0.5:
     lodash.tail "^4.1.1"
     pify "^2.3.0"
 
+sass-variable-loader@^0.1.2:
+  version "0.1.2"
+  resolved "https://registry.npmjs.org/sass-variable-loader/-/sass-variable-loader-0.1.2.tgz#fa415512f2e6bcf1209e2a5f06b58ed1916a0dd6"
+  dependencies:
+    loader-utils "^1.0.3"
+    lodash.camelcase "^4.1.1"
+    node-sass "^4.5.0"
+    strip-json-comments "^2.0.1"
+
 sax@>=0.6.0, sax@~1.2.1:
   version "1.2.2"
   resolved "https://registry.npmjs.org/sax/-/sax-1.2.2.tgz#fd8631a23bc7826bef5d871bdb87378c95647828"
@@ -5706,7 +5715,7 @@ strip-indent@^1.0.1:
   dependencies:
     get-stdin "^4.0.1"
 
-strip-json-comments@^2.0.0, strip-json-comments@~2.0.1:
+strip-json-comments@^2.0.0, strip-json-comments@^2.0.1, strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 

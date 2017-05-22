@@ -6,6 +6,8 @@ import {history} from "./history";
 import Editor from "./editor/pane";
 import * as SplitPane from "react-split-pane";
 
+import style from "../../scss/vars";
+
 const global = window;
 
 type Props = {
@@ -20,8 +22,6 @@ type State = Props & {
     editorWidth : number;
     editorDisplay : "up" | "down";
 };
-
-const barHeight = 50;
 
 export class App extends React.Component<Props, State> {
     historyUnlisten : () => void;
@@ -115,9 +115,9 @@ export class App extends React.Component<Props, State> {
         const article = this.state.article;
         const up = this.state.editorDisplay === "up";
         const deh = this.state.editorHeight;
-        const eh = up ? deh : barHeight;
+        const eh = up ? deh : style.navBarHeight;
         return (
-            <div>
+            <div className={this.state.showNav ? "gt-visibleNav" : "gt-hiddenNav"}>
                 <NavBar
                     title="Get typed"
                     onMenuClick={this.toggleNav}
@@ -135,7 +135,7 @@ export class App extends React.Component<Props, State> {
                         <div ref={a => { this.articleDom = a; }}>
                             <Article
                                 article={article}
-                                height={`calc(100vh - ${eh}px - 50px)`}
+                                height={`calc(100vh - ${eh}px - ${style.navBarHeight})`}
                             />
                         </div>
                         <Editor

@@ -4,6 +4,7 @@ const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const FaviconsWebpackPlugin = require("favicons-webpack-plugin");
+const ScssVars = require("./scss/vars");
 
 const DEV = process.env.NODE_ENV === "development";
 
@@ -68,7 +69,10 @@ module.exports = {
                     use: [{
                         loader: "css-loader"
                     }, {
-                        loader: "sass-loader"
+                        loader: "sass-loader",
+                        options: {
+                            data: ScssVars.asString()
+                        }
                    }],
                    fallback: "style-loader"
                })

@@ -23,6 +23,11 @@ declare module "selectivity/react" {
     export = x;
 }
 
+declare module "!!sass-variable-loader!../../scss/_vars.scss" {
+    const x : any;
+    export default x;
+}
+
 declare module "raw-loader!*" {
     const x : string;
     export = x;
