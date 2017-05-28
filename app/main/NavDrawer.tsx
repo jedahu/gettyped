@@ -1,95 +1,91 @@
 import * as React from "react";
 import {ITreeNode, Tree, Tabs2 as Tabs, Tab2 as Tab} from "@blueprintjs/core";
-import {Location} from "history";
-import {history} from "./history";
+import * as Future from "fluture";
+import * as part from "./part";
+import * as adt from "./adt";
 
-const global = window;
-
-const getNavText = () : Promise<string> =>
-    global.fetch("doc/typenav").
-           then(r => r.text());
-
-type TypesListState = {
-    typeNames: Array<string>;
-    currentName: null | string;
-    unregister: () => void;
-};
-
-class TypesList extends React.Component<{}, TypesListState> {
-    constructor() {
-        super();
-        this.state = {typeNames: [], currentName: null, unregister: () => {}};
-        getNavText().then(this.receiveNavText);
-    }
-
-    receiveNavText = (text : string) => {
-        this.setState({
-            typeNames: text.split(/\s+/)
-        });
-    };
-
-    showTypePage = (node : ITreeNode) =>
-        history.push({
-            pathname: "type:" + node.label
-        });
-
-    listNodes = () : Array<ITreeNode> =>
-        this.state.typeNames.map(label => ({
-            id: "gt-types-list-" + label,
-            label,
-            isSelected: this.state.currentName === label
-        }));
-
-    setSelectionFromPath = (path : string) =>
-        this.setState({
-            currentName:
-            path.startsWith("/type:")
-                ? path.substring("/type:".length)
-                : null
-        });
-
-    historyListener = ({pathname} : Location) => {
-        this.setSelectionFromPath(pathname);
-    }
-
-    componentDidMount = () => {
-        var unregister = history.listen(this.historyListener);
-        this.setState({unregister});
-        this.historyListener(history.location);
-    }
-
-    componentWillUnmount = () => {
-        this.state.unregister();
-    }
-
-    render() {
-        return (
-            <Tree
-                contents={this.listNodes()}
-                onNodeClick={this.showTypePage}
-            />
-        );
+declare module "./adt" {
+    interface Cases<A, B, C> {
+        "NavChanged-e902348a-b7be-4937-926f-863878f1d135" : {
+            type : string;
+        };
     }
 }
 
-type Props = {visible : boolean};
+export const NavChanged = "NavChanged-e902348a-b7be-4937-926f-863878f1d135";
 
-export default (props : Props) =>
-    <div
-        id="gt-nav-drawer"
-        style={{display: props.visible ? "block" : "none"}}>
-        <Tabs
-            id="92e5b1f2-55e0-4df8-a5d9-9077613b44ce"
-            defaultSelectedTabId="d4cae0ce-09a4-4ffb-8d2d-83767698e788">
-            <Tab
-                id="d4cae0ce-09a4-4ffb-8d2d-83767698e788"
-                title="Types"
-                panel={<TypesList/>}
-            />
-            <Tab
-                id="3657b991-924f-434d-90f7-1401e7cfeaf0"
-                title="Modules"
-                panel={<TypesList/>}
-            />
-        </Tabs>
-    </div>;
+const global = window;
+
+const getNavText = () : Future<Error, string> =>
+    Future.tryP(
+        () => global.fetch("doc/typenav").
+                     then(r => r.text()));
+
+type In = {
+    currentName? : string;
+};
+
+type State = {
+    typeNames: Array<string>;
+};
+
+export type Out =
+    adt.Case<typeof NavChanged>;
+
+const typesList = part.mk<In, State, Out>(
+    ({updateState, signal}) => {
+        getNavText().value(
+            text => updateState((s : State) => ({typeNames: text.split(/\s+/)})));
+        return {
+            initialState: _ => ({typeNames: []}),
+            render: ({props, state}) => {
+                const nodeClick =
+                    part.emit(
+                        signal,
+                        (n : ITreeNode) =>
+                            adt.mk(NavChanged, {type: "" + n.label}));
+                return <Tree
+                    contents={listNodes(state.typeNames, props.currentName)}
+                    onNodeClick={nodeClick}
+                />
+            }
+        };
+    });
+
+const listNodes = (names : Array<string>, currentName? : string) : Array<ITreeNode> =>
+    names.map(label => ({
+        id: "gt-types-list-" + label,
+        label,
+        isSelected: currentName === label
+    }));
+
+type NavIn = {
+    visible : boolean;
+    currentTypeName? : string;
+};
+
+export const mk = part.mk<NavIn, {}, Out>(
+    ({signal}) => {
+        const TypesList = typesList(signal);
+        return {
+            render: ({props}) =>
+                <div
+                    id="gt-nav-drawer"
+                    style={{display: props.visible ? "block" : "none"}}>
+                    <Tabs
+                        id="92e5b1f2-55e0-4df8-a5d9-9077613b44ce"
+                        defaultSelectedTabId="d4cae0ce-09a4-4ffb-8d2d-83767698e788">
+                        <Tab
+                            id="d4cae0ce-09a4-4ffb-8d2d-83767698e788"
+                            title="Types"
+                            panel={<TypesList currentName={props.currentTypeName}/>}
+                        />
+                        <Tab
+                            id="3657b991-924f-434d-90f7-1401e7cfeaf0"
+                            title="Modules"
+                            panel={<TypesList currentName={props.currentTypeName}/>}
+                        />
+                    </Tabs>
+                </div>
+        }
+    });

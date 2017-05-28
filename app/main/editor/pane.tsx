@@ -1,12 +1,15 @@
 import * as ts from "typescript";
 import * as React from "react";
-import Buffer from "./buffer";
-import Bar from "./bar";
+import * as Buffer from "./buffer";
+import * as Bar from "./bar";
 import * as welcome from "./welcome.md";
 import {makeApi} from "ts-rpc/main";
 import * as WAPI from "../../worker/api";
 import * as worker from "worker-loader?name=worker.[hash].js!../../worker";
 import tsconfig from "../tsconfig";
+import * as part from "../part";
+import * as Future from "fluture";
+import * as adt from "../adt";
 
 const global = window;
 
@@ -20,14 +23,180 @@ const wapi = makeApi<WAPI.Arg, WAPI.Ret>(new worker(), {
 type Model = monaco.editor.IModel;
 type ViewState = monaco.editor.IEditorViewState;
 
-type Props = {
+type In = {
     id : string;
     height : number;
     width : number;
     currentPath? : string;
-    display : "up"|"down";
-    onPathChange : (path : string) => void;
-    onToggleDisplay : (state : "up" | "down") => void;
+    display : {visible : boolean};
+};
+
+export const PathChange = Bar.PathChange;
+export const ToggleDisplay = Bar.ToggleDisplay;
+export type Out = Bar.Out;
+
+type State = {
+    currentPath : string;
+    models : {[path : string] : ModelData};
+};
+
+declare module "../adt" {
+    interface Cases<A, B, C> {
+        "GetCreateModel-41b85fe0-26d5-4a4f-b3eb-a7300fbe2599" : {
+            path : string;
+            data : ModelData;
+        };
+    }
+}
+
+export const GetCreateModel = "GetCreateModel-41b85fe0-26d5-4a4f-b3eb-a7300fbe2599";
+
+type Internal =
+    Buffer.Out |
+    adt.Case<typeof GetCreateModel>;
+
+export const mk = part.mk<In, State, Out>(
+    ({updateState, signal}) => {
+        const pathToLoad = (props : In) =>
+            props.currentPath || placeholderPath;
+
+        const currentPath = (state : State) =>
+            state.currentPath;
+
+        const currentModelData = (state : State) =>
+            state.models[currentPath(state)];
+
+        const handler = (event : Internal) => {
+            if (event._tag === Buffer.ViewStatus) {
+                const {path, state: vs} = event._val;
+                return updateState((state : State, props : In) => {
+                    const md = state.models[path];
+                    md.viewState = vs;
+                    return state;
+                });
+            }
+            if (event._tag === Buffer.ValidationStatus) {
+                const isValid = event._val;
+                return updateState((state : State, props : In) => {
+                    const md = currentModelData(state);
+                    md.status = isValid ? md.status & ~ModelStatus.Error : md.status | ModelStatus.Error;
+                    return state;
+                });
+            };
+            if (event._tag === GetCreateModel) {
+                const {path, data} = event._val;
+                return updateState((state : State) => ({
+                    currentPath: path,
+                    models: {
+                        ...state.models,
+                        [path]: data
+                    }
+                }));
+            }
+            return adt.assertExhausted(event);
+        };
+
+        const BarElem = Bar.mk(signal);
+        const BufferElem = Buffer.mk(handler);
+
+        return {
+            initialState: props => ({
+                currentPath: placeholderPath,
+                models: {
+                    [placeholderPath]: {
+                        model: placeholderModel,
+                        status: ModelStatus.Open
+                    }
+                }
+            }),
+            render: ({props, state}) => {
+                const path = currentPath(state);
+                const {model, viewState} = currentModelData(state);
+                const ks = Object.keys(state.models);
+                ks.sort();
+                const paths = ks.map(k => {
+                    const status = state.models[k].status;
+                    return {
+                        path: k,
+                        error: (status & ModelStatus.Error) > 0,
+                        open : (status & ModelStatus.Open) > 0
+                    };
+                });
+                return <div>
+                    <BarElem
+                        width={props.width}
+                        display={props.display}
+                        currentPath={currentPath(state)}
+                        paths={paths}
+                    />
+                    <div
+                        style={{ display: props.display.visible ? "" : "none" }}>
+                        <BufferElem
+                            modelData={{path, model, viewState}}
+                            height={props.height}
+                            width={props.width}
+                        />;
+                    </div>
+                </div>
+            },
+            update: ({event}) => {
+                if (event._tag === part.Begin) {
+                    return Future.of((x : State) => x);
+                }
+                if (event._tag === part.Change) {
+                    const {prevProps, props, state} = event._val;
+                    const prevPath = prevProps.currentPath;
+                    const ptl = pathToLoad(props);
+                    if (ptl != prevPath) {
+                        return getCreateModelTransitively(ptl, state).value(
+                            x =>
+                                handler(adt.mk(GetCreateModel, {
+                                    path: ptl,
+                                    data: x
+                                })))
+                    }
+                    return;
+                }
+                if (event._tag === part.End) {
+                    return Future.of((x : State) => x);
+                }
+                return adt.assertExhausted(event);
+            }
+        }
+});
+
+const getCreateModel = (path : string, state : State,): Future<Error, ModelData> => {
+    const uri = monaco.Uri.parse(path);
+    const x = state.models[path] || monaco.editor.getModel(uri);
+    return x
+         ? Future.of(x)
+         : Future.tryP(() => global.fetch(path).then(r => r.text())).
+                  map((s : string) => ({
+                      model: monaco.editor.createModel(s, undefined, uri),
+                      status: ModelStatus.Open
+                  }));
+};
+
+const getCreateModelTransitively = (path : string, state : State) : Future<Error, ModelData> => {
+    const deps = (m : Model) : Future<Error, Array<string>> =>
+        Future.node(
+            k =>
+                wapi.dependencies({
+                    path,
+                    code: m.getValue(undefined, false),
+                    target: tsconfig.target || ts.ScriptTarget.ES5,
+                    kind: ts.ScriptKind.TS
+                },
+                                  ds => {
+                                      k(null, ds);
+                                  }
+                ));
+    const go = (path : string) : Future<Error, ModelData> =>
+        getCreateModel(path, state).chain(
+            md => deps(md.model).chain(
+                ds => Future.parallel(Infinity, ds.map(s => `/${s}.ts`).map(go)).map(
+                    _ => md)));
+    return go(path);
 };
 
 enum ModelStatus {
@@ -42,11 +211,6 @@ type ModelData = {
     status : ModelStatus
 };
 
-type State = {
-    currentPath : string;
-    models : {[path : string] : ModelData};
-};
-
 const placeholderPath = "/welcome.md";
 const placeholderUri = monaco.Uri.parse(placeholderPath);
 
@@ -55,150 +219,3 @@ const placeholderModel =
         welcome,
         "markdown",
         placeholderUri);
-
-export default class EditorPane extends React.Component<Props, State> {
-    placeholder : Model;
-    getViewState : () => ViewState;
-    setModel : (m : Model) => void;
-
-    constructor(props : Props) {
-        super(props);
-        this.state = {
-            currentPath: placeholderPath,
-            models: {
-                [placeholderPath]: {
-                    model: placeholderModel,
-                    status: ModelStatus.None
-                }
-            }
-        };
-    }
-
-    pathToLoad() : string {
-        return this.props.currentPath || placeholderPath;
-    }
-
-    currentPath() : string {
-        return this.state.currentPath;
-    }
-
-    currentModelData() : ModelData {
-        return this.state.models[this.currentPath()];
-    }
-
-    currentModule() : Model {
-        return this.currentModelData().model;
-    }
-
-    getCreateModel(path: string): Promise<ModelData> {
-        const uri = monaco.Uri.parse(path);
-        const x = this.state.models[path] || monaco.editor.getModel(uri);
-        return x
-            ? Promise.resolve(x)
-            : global.fetch(path).
-                then(r => r.text()).
-                then(s => ({
-                    model: monaco.editor.createModel(s, undefined, uri),
-                    status: ModelStatus.Open
-                }));
-    }
-
-    getCreateModelTransitively(path : string) : Promise<ModelData> {
-        const deps = (m : Model) : Promise<Array<string>> =>
-            new Promise(
-                resolve =>
-                    wapi.dependencies({
-                        path,
-                        code: m.getValue(undefined, false),
-                        target: tsconfig.target || ts.ScriptTarget.ES5,
-                        kind: ts.ScriptKind.TS
-                    },
-                    ds => {
-                        resolve(ds);
-                    }
-                    ));
-        const go = async (path : string) : Promise<ModelData> => {
-            const md = await this.getCreateModel(path);
-            const ds = await deps(md.model);
-            await Promise.all(ds.map(s => `/${s}.ts`).map(go));
-            this.setModel(md.model);
-            return md;
-        };
-        return go(path);
-    }
-
-    onValidStateChange = (isValid : boolean) => {
-        const s = this.currentModelData().status;
-        this.currentModelData().status = isValid ? s & ~ModelStatus.Error : s | ModelStatus.Error;
-        this.setState(this.state);
-    }
-
-    componentDidUpdate(prevProps : Props) {
-        const prevPath = prevProps.currentPath;
-        const ptl = this.pathToLoad();
-        if (ptl != prevPath) {
-            this.getCreateModelTransitively(ptl).
-            then(x => {
-                if (prevPath && this.state.models[prevPath]) {
-                    const {model: prevModel, status: prevStatus} = this.state.models[prevPath];
-                    const prevVs = this.getViewState();
-                    this.setState({
-                        currentPath: ptl,
-                        models: {
-                            ...this.state.models,
-                            [prevPath]: {
-                                model: prevModel,
-                                viewState: prevVs,
-                                status: prevStatus
-                            },
-                            [ptl]: x
-                        }
-                    });
-                }
-                this.setState({
-                    currentPath: ptl,
-                    models: {
-                        ...this.state.models,
-                        [ptl]: x
-                    }
-                });
-            });
-        }
-    }
-
-    render() {
-        const {model: m, viewState: vs} = this.currentModelData();
-        const ks = Object.keys(this.state.models);
-        ks.sort();
-        const paths = ks.map(k => {
-            const status = this.state.models[k].status;
-            return {
-                path: k,
-                error: (status & ModelStatus.Error) > 0,
-                open : (status & ModelStatus.Open) > 0
-            };
-        });
-        return <div>
-            <Bar
-                width={this.props.width}
-                display={this.props.display}
-                currentPath={this.currentPath()}
-                paths={paths}
-                onPathChange={this.props.onPathChange}
-                onToggleClick={this.props.onToggleDisplay}
-            />
-            <div
-                style={{ display: this.props.display === "up" ? "" : "none" }}>
-                <Buffer
-                    model={m}
-                    viewState={vs}
-                    height={this.props.height}
-                    width={this.props.width}
-                    getViewState={f => { this.getViewState = f; }}
-                    setModel={f => { this.setModel = f; }}
-                    onValidStateChange={this.onValidStateChange}
-                />;
-            </div>
-        </div>
-    }
-}

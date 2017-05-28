@@ -20,7 +20,8 @@ global.addEventListener(
         injectTapEventPlugin();
         FocusStyleManager.onlyShowFocusOnTabs();
 
-        const App = require("./index").App;
+        const App = require("./index");
+        const AppElem = App.mk();
 
         const m = monaco;
         m.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -41,10 +42,10 @@ global.addEventListener(
         elem.setAttribute("id", "gt-app");
         document.body.appendChild(elem);
         ReactDOM.render(
-            <App
+            <AppElem
                 showNav={true}
                 editorHeight={200}
-                currentPath="/welcome.md"
+                currentModulePath="/welcome.md"
             />,
             elem);
     }));

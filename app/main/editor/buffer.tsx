@@ -1,4 +1,22 @@
 import * as React from "react";
+import * as part from "../part";
+import * as adt from "../adt";
+
+declare module "../adt" {
+    interface Cases<A, B, C> {
+        "ViewStatus-11ccfdff-711d-4500-b28a-779d62c3cd6c" : {
+            path : string;
+            state : ViewState;
+        };
+
+        "ValidationStatus-b7c5b119-4d9e-496b-bed4-2b7bfc19348e" : {
+            valid : boolean;
+        };
+    }
+}
+
+export const ViewStatus = "ViewStatus-11ccfdff-711d-4500-b28a-779d62c3cd6c";
+export const ValidationStatus = "ValidationStatus-b7c5b119-4d9e-496b-bed4-2b7bfc19348e";
 
 const global = window;
 
@@ -6,82 +24,79 @@ type Model = monaco.editor.IModel;
 type ViewState = monaco.editor.IEditorViewState;
 type MEditor = monaco.editor.IStandaloneCodeEditor;
 
-type Props = {
-    onValidStateChange? : (isValid : boolean) => any;
+type In = {
     height : number;
     width : number;
-    model : Model;
-    viewState? : ViewState;
-    getViewState? : (f : () => ViewState) => void;
-    setModel : (f : (m : Model) => void) => void;
+    modelData : {
+        path : string;
+        model : Model;
+        viewState? : ViewState;
+    };
 };
 
-export default class EditorBuffer extends React.Component<Props, {}> {
-    domPeer : HTMLDivElement;
-    editor: MEditor;
+export type Out =
+    adt.Case<typeof ViewStatus> |
+    adt.Case<typeof ValidationStatus>;
 
-    render(): JSX.Element {
-        const style = {
-            height: this.props.height,
-            width: "100%"
-        };
-        return <div
-                   style={style}
-                   ref={elem => { this.domPeer = elem; }}>
-        </div>;
-    }
+type State = {
+};
 
-    resizeListener = () => {
-        this.editor.layout();
-    }
-
-    resize(height : number) {
-        this.editor.layout({
-            height,
-            width: this.props.width
-        });
-    }
-
-    componentDidMount() {
-        this.editor = monaco.editor.create(this.domPeer, {
-            model: this.props.model,
-            lineNumbers: "off"
-        });
-        if (this.props.getViewState) {
-            this.props.getViewState(() => this.editor.saveViewState());
-        }
-        if (this.props.setModel) {
-            this.props.setModel(m => this.editor.setModel(m));
-        }
-
-        const onValidStateChange = this.props.onValidStateChange;
-        if (onValidStateChange) {
-            this.editor.onDidChangeModelDecorations(
-                _ => onValidStateChange(
-                    !this.editor.getModel().getAllDecorations().find(
-                        d => d.isForValidation)));
-        }
-
-        setTimeout(() => {
-        global.requestAnimationFrame(() => {
-            this.resize(this.props.height);
-            global.addEventListener("resize", this.resizeListener);
-        });
-        }, 2);
-    }
-
-    componentWillUnmount() {
-        global.removeEventListener("resize", this.resizeListener);
-    }
-
-    componentDidUpdate(prevProps: Props) {
-        if (this.editor) {
-            this.editor.setModel(this.props.model);
-            if (this.props.viewState) {
-                this.editor.restoreViewState(this.props.viewState);
+export const mk = part.mk<In, State, Out>(
+    ({signal}) => {
+        let editor : MEditor;
+        let domPeer : HTMLDivElement;
+        const autoResize = () => editor.layout();
+        return {
+            render: ({props}) => {
+                const style = {
+                    height: props.height,
+                    width: "100%"
+                };
+                return <div style={style} ref={a => {domPeer = a;}}></div>;
+            },
+            update: ({event}) => {
+                if (event._tag === part.Begin) {
+                    const {props} = event._val;
+                    editor = monaco.editor.create(domPeer, {
+                        model: props.modelData.model,
+                        lineNumbers: "off"
+                    });
+                    editor.onDidChangeModelDecorations(
+                        part.emit(signal, _ => adt.mk(ValidationStatus, {
+                            valid: !editor.getModel().getAllDecorations().find(
+                                d => d.isForValidation)
+                        })));
+                    setTimeout(() => {
+                        global.requestAnimationFrame(() => {
+                            editor.layout({height: props.height, width: props.width});
+                            global.addEventListener("resize", autoResize);
+                        });
+                    }, 1);
+                    return;
+                }
+                if (event._tag === part.Change) {
+                    const {prevProps, props} = event._val;
+                    if (editor) {
+                        if (prevProps.modelData.path !== props.modelData.path) {
+                            signal(adt.mk(ViewStatus, {
+                                path: prevProps.modelData.path,
+                                state: editor.saveViewState()
+                            }));
+                            editor.setModel(props.modelData.model);
+                            if (props.modelData.viewState) {
+                                editor.restoreViewState(props.modelData.viewState);
+                            }
+                        }
+                        editor.layout({height: props.height, width: props.width});
+                        editor.focus();
+                    }
+                    return;
+                }
+                if (event._tag === part.End) {
+                    global.removeEventListener("resize", autoResize);
+                    return;
+                }
+                return adt.assertExhausted(event);
             }
-            this.resize(this.props.height);
-            this.editor.focus();
-        }
-    }
-}
+        };
+    });

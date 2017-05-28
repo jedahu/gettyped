@@ -1,184 +1,221 @@
 import * as React from "react";
-import NavDrawer from "./NavDrawer";
-import NavBar from "./NavBar";
-import {Location} from "history";
-import {history} from "./history";
-import Editor from "./editor/pane";
+import * as NavDrawer from "./NavDrawer";
+import * as NavBar from "./NavBar";
+import * as History from "./history";
+import * as Editor from "./editor/pane";
 import * as SplitPane from "react-split-pane";
+import * as adt from "./adt";
+import * as part from "./part";
+import * as Future from "fluture";
 
 import style from "../../scss/vars";
 
 const global = window;
 
-type Props = {
+declare module "./adt" {
+    interface Cases<A, B, C> {
+        "EditorResize-852ac8fa-3f92-4935-9a87-a0e37670395d" : number;
+        "EditorWidth-6e33b03f-2a4c-45ce-8fc7-895408b09eef" : number;
+        "PossibleModuleClick-af0bc045-44ee-4252-8048-c17f64a709c8" : MouseEvent;
+    }
+}
+
+const EditorResize = "EditorResize-852ac8fa-3f92-4935-9a87-a0e37670395d";
+const EditorWidth = "EditorWidth-6e33b03f-2a4c-45ce-8fc7-895408b09eef";
+const PossibleModuleClick = "PossibleModuleClick-af0bc045-44ee-4252-8048-c17f64a709c8";
+
+type In = {
     showNav : boolean;
     article? : string | JSX.Element;
     editorHeight : number;
+    currentModulePath : string;
+};
+
+type State = In & {
+    modulePaths : Array<string>;
+    editorWidth : number;
+    editorDisplay : {visible : boolean};
     currentPath : string;
 };
 
-type State = Props & {
-    paths : Array<string>;
-    editorWidth : number;
-    editorDisplay : "up" | "down";
-};
+type Internal =
+    History.Out |
+    NavBar.Out |
+    NavDrawer.Out |
+    Editor.Out |
+    adt.Case<typeof EditorResize> |
+    adt.Case<typeof PossibleModuleClick> |
+    adt.Case<typeof EditorWidth>;
 
-export class App extends React.Component<Props, State> {
-    historyUnlisten : () => void;
-    articleDom : HTMLElement;
+export const mk = part.mk<In, State, {}>(
+    ({updateState}) => {
+        let articleDom : HTMLElement;
 
-    constructor(props : Props) {
-        super(props)
-        this.state = {
-            ...props,
-            paths: [props.currentPath],
-            editorWidth: 0,
-            editorDisplay: "up"
+        const typeHandler = (type : string) =>
+            Future.tryP<Error, string>(
+                () => global.fetch(`/doc/type/${type}.html`).
+                             then(r => r.text())
+            ).value(
+                html =>
+                    updateState((_ : State) => ({article: html})));
+
+        const routePath = (path : string) => {
+            if (path === "/") {
+                return Future.tryP<Error, string>(
+                    () => global.fetch("/doc/index.html").
+                                 then(r => r.text())
+                ).value(
+                    html =>
+                        updateState((_ : State) => ({article: html})));
+            }
+            if (path.startsWith("/type:")) {
+                return typeHandler(path.substring("/type:".length));
+            }
+            return updateState((_ : State) => ({article: "<p>404</p>"}));
+        }
+
+        const handle = (event : Internal) => {
+            if (event._tag === History.LocationChange) {
+                const {pathname} = event._val;
+                routePath(pathname);
+                return updateState((_ : State) => ({currentPath: pathname}));
+            }
+            if (event._tag === NavBar.MenuClick) {
+                return updateState((s : State) => ({showNav: !s.showNav}));
+            }
+            if (event._tag === NavBar.HomeClick) {
+                return updateState((_ : State) => ({currentPath: "/"}));
+            }
+            if (event._tag === NavDrawer.NavChanged) {
+                const {type} = event._val;
+                return updateState((_ : State) => ({currentPath: `/type:${type}`}));
+            }
+            if (event._tag === Editor.PathChange) {
+                const {path} = event._val;
+                return updateState((_ : State) => ({currentModulePath: path}));
+            }
+            if (event._tag === Editor.ToggleDisplay) {
+                return updateState(
+                    (s : State) => ({
+                        editorDisplay: {visible : !s.editorDisplay.visible}
+                    }));
+            }
+            if (event._tag === EditorResize) {
+                return updateState((_ : State) => ({editorHeight: event._val}));
+            }
+            if (event._tag === EditorWidth) {
+                return updateState((_ : State) => ({editorWidth: event._val}));
+            }
+            if (event._tag === PossibleModuleClick) {
+                const e = event._val;
+                if (e.target instanceof HTMLElement &&
+                    e.target.hasAttribute("rundoc-module")) {
+                    const module = e.target.getAttribute("rundoc-module");
+                    const path = `/${module}.ts`;
+                    return updateState(
+                        (state : State) =>
+                            state.modulePaths.indexOf(path) >= 0
+                             ? {currentModulePath: path}
+                             : {
+                                 moduelPaths: state.modulePaths.concat([path]),
+                                 currentModulePath: path
+                             });
+                }
+                return;
+            }
+            return adt.assertExhausted(event);
         };
-    }
 
-    toggleNav = () => {
-        this.setState({showNav: !this.state.showNav});
-    }
-
-    onToggleDisplay = (state : "up" | "down") =>
-        this.setState({editorDisplay: state});
-
-    onPathChange = (path : string) =>
-        this.setState({currentPath: path});
-
-    goHome = () => history.push({pathname: "/"});
-
-    typeHandler = (type : string) : Promise<void> =>
-        global.
-        fetch(`/doc/type/${type}.html`).
-        then(r => r.text()).
-        then(
-            s => this.setState({article: s}),
-            _ => this.setState({article: <p>For Oh For</p>})
-        );
-
-    routePath = (path : string) => {
-        if (path === "/") {
-            fetch("/doc/index.html").
-                then(r => r.text()).
-                then(s => this.setState({article: s}));
-        }
-        if (path.startsWith("/type:")) {
-            this.typeHandler(path.substring("/type:".length));
-        }
-        else if (path.startsWith("module:")) {
-        }
-    }
-
-    historyListener = ({pathname} : Location) => {
-        console.log("history", pathname);
-        this.routePath(pathname);
-    }
-
-    componentDidMount = () => {
-        this.historyUnlisten = history.listen(this.historyListener);
-        this.routePath(history.location.pathname);
-        const main = document.getElementById("gt-main") as HTMLElement;
-        const width = main.offsetWidth;
-        this.setState({editorWidth: width});
-        this.articleDom.addEventListener("click", this.moduleClickListener);
-    }
-
-    componentWillUnmount = () => {
-        this.historyUnlisten();
-        this.articleDom.removeEventListener("click", this.moduleClickListener);
-    }
-
-    moduleClickListener = (e : MouseEvent) => {
-        if (e.target instanceof HTMLElement &&
-            e.target.hasAttribute("rundoc-module")) {
-            const module = e.target.getAttribute("rundoc-module");
-            const path = `/${module}.ts`;
-            if (this.state.paths.indexOf(path) >= 0) {
-                this.setState({currentPath: path});
-            }
-            else {
-                this.setState({
-                    paths: this.state.paths.concat([path]),
-                    currentPath: path
-                });
-            }
-        }
-    }
-
-    resizeEditor = (height : number) => {
-        this.setState({editorHeight: height});
-    }
-
-    render() {
-        const article = this.state.article;
-        const up = this.state.editorDisplay === "up";
-        const deh = this.state.editorHeight;
-        const eh = up ? deh : style.navBarHeight;
-        return (
-            <div className={this.state.showNav ? "gt-visibleNav" : "gt-hiddenNav"}>
-                <NavBar
-                    title="Get typed"
-                    onMenuClick={this.toggleNav}
-                    onHomeClick={this.goHome}
-                />
-                <NavDrawer visible={this.state.showNav}/>
-                <div id="gt-main">
-                    <SplitPane
-                        split="horizontal"
-                        primary="second"
-                        defaultSize={deh}
-                        size={eh}
-                        allowResize={up}
-                        onChange={this.resizeEditor}>
-                        <div ref={a => { this.articleDom = a; }}>
-                            <Article
-                                article={article}
-                                height={`calc(100vh - ${eh}px - ${style.navBarHeight})`}
+        const HistoryElem = History.mk(handle);
+        const NavBarElem = NavBar.mk(handle);
+        const NavDrawerElem = NavDrawer.mk(handle);
+        const EditorElem = Editor.mk(handle);
+        return {
+            initialState: (props : In) => ({
+                ...props,
+                modulePaths: [props.currentModulePath],
+                editorWidth: 0,
+                editorDisplay: {visible: true},
+                currentPath: global.location.pathname
+            }),
+            render: ({state}) => {
+                const article = state.article;
+                const up = state.editorDisplay.visible;
+                const deh = state.editorHeight;
+                const eh = up ? deh : style.navBarHeight;
+                const typeName =
+                    state.currentPath.startsWith("/type:")
+                    ? state.currentPath.substring("/type:".length)
+                    : undefined;
+                return <div className={state.showNav ? "gt-visibleNav" : "gt-hiddenNav"}>
+                    <HistoryElem path={state.currentPath}/>
+                    <NavBarElem title="Get typed"/>
+                    <NavDrawerElem
+                        visible={state.showNav}
+                        currentTypeName={typeName}
+                    />
+                    <div id="gt-main">
+                        <SplitPane
+                            split="horizontal"
+                            primary="second"
+                            defaultSize={deh}
+                            size={eh}
+                            allowResize={up}
+                            onChange={part.emit(handle, adt.ctor(EditorResize))}>
+                            <div ref={a => { articleDom = a; }}>
+                                <Article
+                                    article={article}
+                                    height={`calc(100vh - ${eh}px - ${style.navBarHeight})`}
+                                />
+                            </div>
+                            <EditorElem
+                                id="gt-main-editor"
+                                currentPath={state.currentModulePath}
+                                display={state.editorDisplay}
+                                height={state.editorHeight}
+                                width={state.editorWidth}
                             />
-                        </div>
-                        <Editor
-                            id="gt-main-editor"
-                            currentPath={this.state.currentPath}
-                            display={this.state.editorDisplay}
-                            height={this.state.editorHeight}
-                            width={this.state.editorWidth}
-                            onPathChange={this.onPathChange}
-                            onToggleDisplay={this.onToggleDisplay}
-                        />
-                    </SplitPane>
+                        </SplitPane>
+                    </div>
                 </div>
-            </div>
-            );
-    }
-};
+            },
+            update: ({event}) => {
+                if (event._tag === part.Begin) {
+                    routePath(global.location.pathname);
+                    const main = document.getElementById("gt-main") as HTMLElement;
+                    const width = main.offsetWidth;
+                    articleDom.addEventListener("click", part.emit(handle, adt.ctor(PossibleModuleClick)));
+                    return handle(adt.mk(EditorWidth, width));
+                }
+                if (event._tag === part.End) {
+                    articleDom.removeEventListener("click", part.emit(handle, adt.ctor(PossibleModuleClick)));
+                    return;
+                }
+                return;
+            }
+        };
+    });
+
 
 type ArticleProps = {
     article? : string | JSX.Element;
     height: string;
 };
 
-class Article extends React.Component<ArticleProps, undefined> {
-    constructor(props : ArticleProps) {
-        super(props);
-    }
-
-    render() {
-        const article = this.props.article;
-        const content = typeof article === "string"
-              ? <div dangerouslySetInnerHTML={{__html: article}}></div>
-              : <div>{article}</div>;
-        return (
-            <main
-                id="gt-main-article"
-                style={{height: this.props.height}}
-                className="typeset">
-                {content}
-            </main>
-        );
-    }
-}
+const Article = (props : ArticleProps) => {
+    const article = props.article;
+    const content = typeof article === "string"
+                  ? <div dangerouslySetInnerHTML={{__html: article}}></div>
+                  : <div>{article}</div>;
+    return (
+        <main
+            id="gt-main-article"
+            style={{height: props.height}}
+            className="typeset">
+            {content}
+        </main>
+    );
+};
 
 // type Editor = any;
 
