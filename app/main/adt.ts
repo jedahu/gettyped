@@ -1,3 +1,20 @@
+export const when =
+    <A, B, C>(
+        x : A | B,
+        test : (x : A | B) => x is A,
+        f : (_:A) => C,
+        g : (_:B) => C
+    ) : C =>
+    test(x) ? f(x) : g(x);
+
+export const or =
+    <A, B, C>(
+        test : (x : A | B) => x is A,
+        f : (_:A) => C,
+        g : (_:B) => C
+    ) : ((_ : A | B) => C) =>
+    x => test(x) ? f(x) : g(x);
+
 export interface Cases<A = undefined, B = undefined, C = undefined> {
 }
 
@@ -22,7 +39,7 @@ export const ctor  =
     <T extends keyof Cases<A, B, C>, A = undefined, B = undefined, C = undefined>(tag : T) => (val : Cases<A, B, C>[T]) : Case<T, A, B, C> =>
     ({_tag: tag, _val: val});
 
-export const assertExhausted = (_ : never) : any => {
+export const done = (_ : never) : any => {
     throw new Error("Cases should be exhausted.");
 };
 

@@ -2,21 +2,49 @@ import * as React from "react";
 import * as part from "../part";
 import * as adt from "../adt";
 
-declare module "../adt" {
-    interface Cases<A, B, C> {
-        "ViewStatus-11ccfdff-711d-4500-b28a-779d62c3cd6c" : {
-            path : string;
-            state : ViewState;
-        };
+type ViewStatus_ = {
+    path : string;
+    state : ViewState;
+};
 
-        "ValidationStatus-b7c5b119-4d9e-496b-bed4-2b7bfc19348e" : {
-            valid : boolean;
-        };
+export class ViewStatus {
+    [Symbol.species] : "a0c14342-839e-4bcc-8554-ade4695108b6";
+    readonly path : string;
+    readonly state : ViewState;
+
+    constructor(args : ViewStatus_) {
+        Object.assign(this, args);
+    }
+
+    static mk(args : ViewStatus_) {
+        return new ViewStatus(args);
+    }
+
+    static is<Z>(x : ViewStatus | Z) : x is ViewStatus {
+        return x instanceof ViewStatus;
     }
 }
 
-export const ViewStatus = "ViewStatus-11ccfdff-711d-4500-b28a-779d62c3cd6c";
-export const ValidationStatus = "ValidationStatus-b7c5b119-4d9e-496b-bed4-2b7bfc19348e";
+type ValidationStatus_ = {
+    valid : boolean;
+};
+
+export class ValidationStatus {
+    [Symbol.species] : "cf685aa9-4912-4c3f-a47d-f689e6928902";
+    readonly valid : boolean;
+
+    constructor(args : ValidationStatus_) {
+        this.valid = args.valid;
+    }
+
+    static mk(args : ValidationStatus_) {
+        return new ValidationStatus(args);
+    }
+
+    static is<Z>(x : ValidationStatus | Z) : x is ValidationStatus {
+        return x instanceof ValidationStatus;
+    }
+}
 
 const global = window;
 
@@ -34,9 +62,7 @@ type In = {
     };
 };
 
-export type Out =
-    adt.Case<typeof ViewStatus> |
-    adt.Case<typeof ValidationStatus>;
+export type Out = ViewStatus | ValidationStatus;
 
 type State = {
 };
@@ -55,14 +81,14 @@ export const mk = part.mk<In, State, Out>(
                 return <div style={style} ref={a => {domPeer = a;}}></div>;
             },
             update: ({event}) => {
-                if (event._tag === part.Begin) {
-                    const {props} = event._val;
+                if (event instanceof part.Begin) {
+                    const {props} = event;
                     editor = monaco.editor.create(domPeer, {
                         model: props.modelData.model,
                         lineNumbers: "off"
                     });
                     editor.onDidChangeModelDecorations(
-                        part.emit(signal, _ => adt.mk(ValidationStatus, {
+                        signal.emit(_ => ValidationStatus.mk({
                             valid: !editor.getModel().getAllDecorations().find(
                                 d => d.isForValidation)
                         })));
@@ -74,11 +100,11 @@ export const mk = part.mk<In, State, Out>(
                     }, 1);
                     return;
                 }
-                if (event._tag === part.Change) {
-                    const {prevProps, props} = event._val;
+                if (event instanceof part.Change) {
+                    const {prevProps, props} = event;
                     if (editor) {
                         if (prevProps.modelData.path !== props.modelData.path) {
-                            signal(adt.mk(ViewStatus, {
+                            signal.run(ViewStatus.mk({
                                 path: prevProps.modelData.path,
                                 state: editor.saveViewState()
                             }));
@@ -92,11 +118,11 @@ export const mk = part.mk<In, State, Out>(
                     }
                     return;
                 }
-                if (event._tag === part.End) {
+                if (event instanceof part.End) {
                     global.removeEventListener("resize", autoResize);
                     return;
                 }
-                return adt.assertExhausted(event);
+                return adt.done(event);
             }
         };
     });

@@ -10,8 +10,7 @@ import tsconfig from "../tsconfig";
 import * as part from "../part";
 import * as Future from "fluture";
 import * as adt from "../adt";
-
-const global = window;
+import {fetchText} from "../fetch";
 
 const wapi = makeApi<WAPI.Arg, WAPI.Ret>(new worker(), {
     dependencies: "dependencies",
@@ -31,8 +30,7 @@ type In = {
     display : {visible : boolean};
 };
 
-export const PathChange = Bar.PathChange;
-export const ToggleDisplay = Bar.ToggleDisplay;
+export {PathChange, ToggleDisplay} from "./bar";
 export type Out = Bar.Out;
 
 type State = {
@@ -40,20 +38,28 @@ type State = {
     models : {[path : string] : ModelData};
 };
 
-declare module "../adt" {
-    interface Cases<A, B, C> {
-        "GetCreateModel-41b85fe0-26d5-4a4f-b3eb-a7300fbe2599" : {
-            path : string;
-            data : ModelData;
-        };
+type GetCreateModel_ = {
+    path : string;
+    data : ModelData;
+};
+
+export class GetCreateModel {
+    [Symbol.species] : "f963eb3e-9eba-47df-b970-c77ff5413b08";
+    readonly path : string;
+    readonly data : ModelData;
+
+    private constructor(args : GetCreateModel_) {
+        Object.assign(this, args);
+    }
+
+    static mk(args : GetCreateModel_) {
+        return new GetCreateModel(args);
+    }
+
+    static is<Z>(x : GetCreateModel | Z) : x is GetCreateModel {
+        return x instanceof GetCreateModel;
     }
 }
-
-export const GetCreateModel = "GetCreateModel-41b85fe0-26d5-4a4f-b3eb-a7300fbe2599";
-
-type Internal =
-    Buffer.Out |
-    adt.Case<typeof GetCreateModel>;
 
 export const mk = part.mk<In, State, Out>(
     ({updateState, signal}) => {
@@ -66,38 +72,37 @@ export const mk = part.mk<In, State, Out>(
         const currentModelData = (state : State) =>
             state.models[currentPath(state)];
 
-        const handler = (event : Internal) => {
-            if (event._tag === Buffer.ViewStatus) {
-                const {path, state: vs} = event._val;
-                return updateState((state : State, props : In) => {
-                    const md = state.models[path];
-                    md.viewState = vs;
-                    return state;
-                });
-            }
-            if (event._tag === Buffer.ValidationStatus) {
-                const isValid = event._val;
-                return updateState((state : State, props : In) => {
-                    const md = currentModelData(state);
-                    md.status = isValid ? md.status & ~ModelStatus.Error : md.status | ModelStatus.Error;
-                    return state;
-                });
-            };
-            if (event._tag === GetCreateModel) {
-                const {path, data} = event._val;
-                return updateState((state : State) => ({
-                    currentPath: path,
-                    models: {
-                        ...state.models,
-                        [path]: data
-                    }
-                }));
-            }
-            return adt.assertExhausted(event);
-        };
+        const internal =
+            part.Signal.none.
+                handle<Buffer.ViewStatus>(
+                    Buffer.ViewStatus.is,
+                    ({path, state: vs}) =>
+                        updateState((state : State, props : In) => {
+                            const md = state.models[path];
+                            md.viewState = vs;
+                            return state;
+                        })).
+                handle<Buffer.ValidationStatus>(
+                    Buffer.ValidationStatus.is,
+                    ({valid}) =>
+                        updateState((state : State, props : In) => {
+                            const md = currentModelData(state);
+                            md.status = valid ? md.status & ~ModelStatus.Error : md.status | ModelStatus.Error;
+                            return state;
+                        })).
+                handle<GetCreateModel>(
+                    GetCreateModel.is,
+                    ({path, data}) =>
+                        updateState((state : State) => ({
+                            currentPath: path,
+                            models: {
+                                ...state.models,
+                                [path]: data
+                            }
+                        })));
 
         const BarElem = Bar.mk(signal);
-        const BufferElem = Buffer.mk(handler);
+        const BufferElem = Buffer.mk(internal);
 
         return {
             initialState: props => ({
@@ -140,45 +145,46 @@ export const mk = part.mk<In, State, Out>(
                 </div>
             },
             update: ({event}) => {
-                if (event._tag === part.Begin) {
-                    return Future.of((x : State) => x);
+                if (event instanceof part.Begin) {
+                    return;
                 }
-                if (event._tag === part.Change) {
-                    const {prevProps, props, state} = event._val;
+                if (event instanceof part.Change) {
+                    const {prevProps, props, state} = event;
                     const prevPath = prevProps.currentPath;
                     const ptl = pathToLoad(props);
                     if (ptl != prevPath) {
                         return getCreateModelTransitively(ptl, state).value(
                             x =>
-                                handler(adt.mk(GetCreateModel, {
+                                internal.run(GetCreateModel.mk({
                                     path: ptl,
                                     data: x
                                 })))
                     }
                     return;
                 }
-                if (event._tag === part.End) {
-                    return Future.of((x : State) => x);
+                if (event instanceof part.End) {
+                    return;
                 }
-                return adt.assertExhausted(event);
+                return adt.done(event);
             }
         }
 });
 
-const getCreateModel = (path : string, state : State,): Future<Error, ModelData> => {
+const getCreateModel = (path : string, state : State,): Future<string, ModelData> => {
     const uri = monaco.Uri.parse(path);
     const x = state.models[path] || monaco.editor.getModel(uri);
     return x
          ? Future.of(x)
-         : Future.tryP(() => global.fetch(path).then(r => r.text())).
-                  map((s : string) => ({
-                      model: monaco.editor.createModel(s, undefined, uri),
-                      status: ModelStatus.Open
-                  }));
+         : fetchText(path).
+                map(({text: s}) => ({
+                    model: monaco.editor.createModel(s, undefined, uri),
+                    status: ModelStatus.Open
+                })).
+                mapRej(({reason}) => reason);
 };
 
-const getCreateModelTransitively = (path : string, state : State) : Future<Error, ModelData> => {
-    const deps = (m : Model) : Future<Error, Array<string>> =>
+const getCreateModelTransitively = (path : string, state : State) : Future<string, ModelData> => {
+    const deps = (m : Model) : Future<string, Array<string>> =>
         Future.node(
             k =>
                 wapi.dependencies({
@@ -191,7 +197,7 @@ const getCreateModelTransitively = (path : string, state : State) : Future<Error
                                       k(null, ds);
                                   }
                 ));
-    const go = (path : string) : Future<Error, ModelData> =>
+    const go = (path : string) : Future<string, ModelData> =>
         getCreateModel(path, state).chain(
             md => deps(md.model).chain(
                 ds => Future.parallel(Infinity, ds.map(s => `/${s}.ts`).map(go)).map(

@@ -1,24 +1,50 @@
 import * as React from "react";
 import * as part from "../part";
-import * as adt from "../adt";
 
 import * as Selectivity from "selectivity/react";
 import "selectivity/styles/selectivity-react.css";
 
-declare module "../adt" {
-    interface Cases<A, B, C> {
-        "PathChange-d1a1880b-93a8-40c9-bf69-eac1938d4be5" : {
-            path : string;
-        };
+type PathChange_ = {
+    path : string;
+};
 
-        "ToggleDisplay-d67e80dc-1927-4aa9-9440-8f5cfd3ef42c" : {
-            visible : boolean;
-        };
+export class PathChange {
+    [Symbol.species] : "343badc0-ef34-479e-96e8-e3ec31c2732a";
+    readonly path : string;
+
+    private constructor(args : PathChange_) {
+        this.path = args.path;
+    }
+
+    static mk(args : PathChange_) {
+        return new PathChange(args);
+    }
+
+    static is<Z>(x : PathChange | Z) : x is PathChange {
+        return x instanceof PathChange;
     }
 }
 
-export const PathChange = "PathChange-d1a1880b-93a8-40c9-bf69-eac1938d4be5";
-export const ToggleDisplay = "ToggleDisplay-d67e80dc-1927-4aa9-9440-8f5cfd3ef42c";
+type ToggleDisplay_ = {
+    visible : boolean;
+};
+
+export class ToggleDisplay {
+    [Symbol.species] : "1d7513cf-b2e2-4947-ad6e-d2aeaa422ab4";
+    readonly visible : boolean;
+
+    private constructor(args : ToggleDisplay_) {
+        this.visible = args.visible;
+    }
+
+    static mk(args : ToggleDisplay_) {
+        return new ToggleDisplay(args);
+    }
+
+    static is<Z>(x : ToggleDisplay | Z) : x is ToggleDisplay {
+        return x instanceof ToggleDisplay;
+    }
+}
 
 type In = {
     paths : Array<{path : string, error : boolean, open : boolean}>;
@@ -27,9 +53,7 @@ type In = {
     width : number;
 };
 
-export type Out =
-    adt.Case<typeof PathChange> |
-    adt.Case<typeof ToggleDisplay>;
+export type Out = PathChange | ToggleDisplay;
 
 export const mk = part.mk<In, {}, Out>(
     ({signal}) => {
@@ -51,18 +75,18 @@ export const mk = part.mk<In, {}, Out>(
                                 text: props.currentPath
                             }}
                             items={[].concat.apply([], [oerrs, oopen, orest])}
-                            onChange={part.emit(signal, (x : any) => adt.mk(PathChange, x.value))}
+                            onChange={signal.emit((x : {value : string}) => PathChange.mk({path: x.value}))}
                         />
                     </div>
                     <div className="pt-navbar-group pt-align-right">{
                         props.display.visible
                         ? <button
                             className="pt-button pt-minimal pt-icon-double-chevron-down"
-                            onClick={part.emit(signal, _ => adt.mk(ToggleDisplay, {visible: false}))}
+                            onClick={signal.emit(_ => ToggleDisplay.mk({visible: false}))}
                         ></button>
                         : <button
                             className="pt-button pt-minimal pt-icon-double-chevron-up"
-                            onClick={part.emit(signal, _ => adt.mk(ToggleDisplay, {visible: true}))}
+                            onClick={signal.emit(_ => ToggleDisplay.mk({visible: true}))}
                         ></button>
                     }</div>
                 </nav>;

@@ -1,65 +1,114 @@
 import * as React from "react";
-import * as adt from "./adt";
 
-declare module "./adt" {
-    interface Cases<A, B, C> {
-        "Begin-34139498-652b-41ba-976b-40446713d707" : {
-            props : A;
-            state : B;
-        };
+type Begin_<A, I> = {
+    props : A;
+    state : I;
+};
 
-        "Change-2b657919-b403-4248-a4a0-e29afebcb8a7" : {
-            prevProps : A;
-            props : A;
-            prevState : B;
-            state : B
-        };
+export class Begin<A, I> {
+    [Symbol.species] : "0f0d8cc7-c860-4a00-a724-f523873a1fb9";
+    readonly props : A;
+    readonly state : I;
 
-        "End-17bc5f8f-83ac-4abd-aa82-aefd9b791065" : {
-            props : A;
-            state : B;
-        };
+    constructor(args : Begin_<A, I>) {
+        Object.assign(this, args);
+    }
+
+    static mk<A, I>(args : Begin_<A, I>) {
+        return new Begin<A, I>(args);
+    }
+
+    static is<A, I, Z>(x : Begin<A, I> | Z) : x is Begin<A, I> {
+        return x instanceof Begin;
     }
 }
 
-export const Begin = "Begin-34139498-652b-41ba-976b-40446713d707";
-export const Change = "Change-2b657919-b403-4248-a4a0-e29afebcb8a7";
-export const End = "End-17bc5f8f-83ac-4abd-aa82-aefd9b791065";
+type Change_<A, I> = {
+    prevProps : A;
+    props: A;
+    prevState: I;
+    state: I;
+};
 
-export type Signal<A> = (_:A) => void;
+export class Change<A, I> {
+    [Symbol.species] : "5cb63142-0d65-4f3f-b9f6-5ee164d9c1de";
+    readonly prevProps : A;
+    readonly props : A;
+    readonly prevState : I;
+    readonly state : I;
 
-export const emit = <A, B>(s : Signal<A>, f : (_:B) => A) : Signal<B> =>
-    b => s(f(b));
+    constructor(args : Change_<A, I>) {
+        Object.assign(this, args);
+    }
 
-export const handle =
-    <Z, T extends keyof adt.Cases, A = undefined, B = undefined, C = undefined>(
-        a : T,
-        f : (_:adt.Cases<A, B, C>[T]) => void,
-        s : Signal<Z>
-    ) : Signal<adt.Case<T, A, B, C> | Z> =>
-    x => adt.isCase(a, x)
-    ? f(x._val)
-    : s(x);
+    static mk<A, I>(args : Change_<A, I>) {
+        return new Change<A, I>(args);
+    }
 
-export const react =
-    <Z, T extends keyof adt.Cases, A = undefined, B = undefined, C = undefined>(
-        a : T,
-        f : (_:adt.Cases<A, B, C>[T]) => void,
-        s : Signal<adt.Case<T, A, B, C> | Z>
-    ) : Signal<adt.Case<T, A, B, C> | Z> =>
-    x => {
-        if (adt.isCase(a, x)) {
-            f(x._val);
-        }
-        s(x);
-    };
+    static is<A, I, Z>(x : Change<A, I> | Z) : x is Change<A, I> {
+        return x instanceof Change;
+    }
+}
+
+type End_<A, I> = {
+    props : A;
+    state : I;
+};
+
+export class End<A, I> {
+    [Symbol.species] : "56a8806f-5fc5-470d-859e-9ae025364489";
+    readonly props : A;
+    readonly state : I;
+
+    constructor(args : End_<A, I>) {
+        Object.assign(this, args);
+    }
+
+    static mk<A, I>(args : End_<A, I>) {
+        return new End<A, I>(args);
+    }
+
+    static is<A, I, Z>(x : End<A, I> | Z) : x is End<A, I> {
+        return x instanceof End;
+    }
+}
+
+export class Signal<A> {
+    readonly run : (_:A) => void;
+
+    constructor(run : (_:A) => void) {
+        this.run = run;
+    }
+
+    static mk<A>(run : (_:A) => void) : Signal<A> {
+        return new Signal<A>(run);
+    }
+
+    static readonly none : Signal<never> =
+        new Signal<never>(_ => {});
+
+    handle<B>(
+        test : (x : A|B) => x is B,
+        f : (_:B) => void
+    ) : Signal<A | B> {
+        return Signal.mk<A | B>(ab => {
+            if (test(ab)) {
+                f(ab);
+            }
+            else {
+                this.run(ab);
+            }
+        });
+    }
+
+    emit<B>(f : (_:B) => A) : Signal<B>["run"] {
+        return b => this.run(f(b));
+    }
+}
 
 type Render<A, I> = (args : {props : A, state : I}) => null | JSX.Element;
 
-type PartEvent<A, I> =
-    adt.Case<typeof Begin, A, I> |
-    adt.Case<typeof Change, A, I> |
-    adt.Case<typeof End, A, I>;
+type PartEvent<A, I> = Begin<A, I> | Change<A, I> | End<A, I>;
 
 export type Event<A, I> = PartEvent<A, I>;
 
@@ -109,7 +158,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
         this.componentDidMount = () => {
             if (update) {
                 update({
-                    event: adt.mk<typeof Begin, A, I>(Begin, {
+                    event: Begin.mk({
                         props: this.props.props,
                         state: this.state
                     })
@@ -120,7 +169,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
         this.componentDidUpdate = (prevProps, prevState) => {
             if (update) {
                 update({
-                    event: adt.mk<typeof Change, A, I>(Change, {
+                    event: Change.mk({
                         prevProps: prevProps.props,
                         prevState,
                         props: this.props.props,
@@ -133,7 +182,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
         this.componentWillUnmount = () => {
             if (update) {
                 update({
-                    event: adt.mk<typeof End, A, I>(End, {
+                    event: End.mk({
                         props: this.props.props,
                         state: this.state
                     })

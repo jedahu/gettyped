@@ -4,7 +4,6 @@ import * as NavBar from "./NavBar";
 import * as History from "./history";
 import * as Editor from "./editor/pane";
 import * as SplitPane from "react-split-pane";
-import * as adt from "./adt";
 import * as part from "./part";
 import * as Future from "fluture";
 
@@ -12,17 +11,47 @@ import style from "../../scss/vars";
 
 const global = window;
 
-declare module "./adt" {
-    interface Cases<A, B, C> {
-        "EditorResize-852ac8fa-3f92-4935-9a87-a0e37670395d" : number;
-        "EditorWidth-6e33b03f-2a4c-45ce-8fc7-895408b09eef" : number;
-        "PossibleModuleClick-af0bc045-44ee-4252-8048-c17f64a709c8" : MouseEvent;
+export class EditorResize {
+    [Symbol.species] : "ab645753-4486-4d77-92ed-8989d67f4e6c";
+
+    constructor(readonly length : number) {}
+
+    static mk(length : number) {
+        return new EditorResize(length);
+    }
+
+    static is<Z>(x : EditorResize | Z) : x is EditorResize {
+        return x instanceof EditorResize;
     }
 }
 
-const EditorResize = "EditorResize-852ac8fa-3f92-4935-9a87-a0e37670395d";
-const EditorWidth = "EditorWidth-6e33b03f-2a4c-45ce-8fc7-895408b09eef";
-const PossibleModuleClick = "PossibleModuleClick-af0bc045-44ee-4252-8048-c17f64a709c8";
+export class EditorWidth {
+    [Symbol.species] : "0386e151-22da-4ca5-8f3f-d95c3585218a";
+
+    constructor(readonly width : number) {}
+
+    static mk(width : number) {
+        return new EditorWidth(width);
+    }
+
+    static is<Z>(x : EditorWidth | Z) : x is EditorWidth {
+        return x instanceof EditorWidth;
+    }
+}
+
+export class PossibleModuleClick {
+    [Symbol.species] : "0386e151-22da-4ca5-8f3f-d95c3585218a";
+
+    constructor(readonly event : MouseEvent) {}
+
+    static mk(event : MouseEvent) {
+        return new PossibleModuleClick(event);
+    }
+
+    static is<Z>(x : PossibleModuleClick | Z) : x is PossibleModuleClick {
+        return x instanceof PossibleModuleClick;
+    }
+}
 
 type In = {
     showNav : boolean;
@@ -37,15 +66,6 @@ type State = In & {
     editorDisplay : {visible : boolean};
     currentPath : string;
 };
-
-type Internal =
-    History.Out |
-    NavBar.Out |
-    NavDrawer.Out |
-    Editor.Out |
-    adt.Case<typeof EditorResize> |
-    adt.Case<typeof PossibleModuleClick> |
-    adt.Case<typeof EditorWidth>;
 
 export const mk = part.mk<In, State, {}>(
     ({updateState}) => {
@@ -74,62 +94,61 @@ export const mk = part.mk<In, State, {}>(
             return updateState((_ : State) => ({article: "<p>404</p>"}));
         }
 
-        const handle = (event : Internal) => {
-            if (event._tag === History.LocationChange) {
-                const {pathname} = event._val;
-                routePath(pathname);
-                return updateState((_ : State) => ({currentPath: pathname}));
-            }
-            if (event._tag === NavBar.MenuClick) {
-                return updateState((s : State) => ({showNav: !s.showNav}));
-            }
-            if (event._tag === NavBar.HomeClick) {
-                return updateState((_ : State) => ({currentPath: "/"}));
-            }
-            if (event._tag === NavDrawer.NavChanged) {
-                const {type} = event._val;
-                return updateState((_ : State) => ({currentPath: `/type:${type}`}));
-            }
-            if (event._tag === Editor.PathChange) {
-                const {path} = event._val;
-                return updateState((_ : State) => ({currentModulePath: path}));
-            }
-            if (event._tag === Editor.ToggleDisplay) {
-                return updateState(
-                    (s : State) => ({
-                        editorDisplay: {visible : !s.editorDisplay.visible}
-                    }));
-            }
-            if (event._tag === EditorResize) {
-                return updateState((_ : State) => ({editorHeight: event._val}));
-            }
-            if (event._tag === EditorWidth) {
-                return updateState((_ : State) => ({editorWidth: event._val}));
-            }
-            if (event._tag === PossibleModuleClick) {
-                const e = event._val;
-                if (e.target instanceof HTMLElement &&
-                    e.target.hasAttribute("rundoc-module")) {
-                    const module = e.target.getAttribute("rundoc-module");
-                    const path = `/${module}.ts`;
-                    return updateState(
-                        (state : State) =>
-                            state.modulePaths.indexOf(path) >= 0
-                             ? {currentModulePath: path}
-                             : {
-                                 moduelPaths: state.modulePaths.concat([path]),
-                                 currentModulePath: path
-                             });
-                }
-                return;
-            }
-            return adt.assertExhausted(event);
-        };
+        const internal =
+            part.Signal.none.
+                handle<History.LocationChange>(
+                    History.LocationChange.is,
+                    ({location: {pathname}}) => {
+                        routePath(pathname);
+                        return updateState((_ : State) => ({currentPath: pathname}));
+                    }).
+                handle<NavBar.MenuClick>(
+                    NavBar.MenuClick.is,
+                    () => updateState((s : State) => ({showNav: !s.showNav}))).
+                handle<NavBar.HomeClick>(
+                    NavBar.HomeClick.is,
+                    () => updateState((_ : State) => ({currentPath: "/"}))).
+                handle<NavDrawer.NavChanged>(
+                    NavDrawer.NavChanged.is,
+                    ({type}) => updateState((_ : State) => ({currentPath: `/type:${type}`}))).
+                handle<Editor.PathChange>(
+                    Editor.PathChange.is,
+                    ({path}) => updateState((_ : State) => ({currentModulePath: path}))).
+                handle<Editor.ToggleDisplay>(
+                    Editor.ToggleDisplay.is,
+                    () => updateState(
+                        (s : State) => ({
+                            editorDisplay: {visible : !s.editorDisplay.visible}
+                        }))).
+                handle<EditorResize>(
+                    EditorResize.is,
+                    ({length}) => updateState((_ : State) => ({editorHeight: length}))).
+                handle<EditorWidth>(
+                    EditorWidth.is,
+                    ({width}) => updateState((_ : State) => ({editorWidth: width}))).
+                handle<PossibleModuleClick>(
+                    PossibleModuleClick.is,
+                    ({event: {target}}) => {
+                        if (target instanceof HTMLElement &&
+                            target.hasAttribute("rundoc-module")) {
+                            const module = target.getAttribute("rundoc-module");
+                            const path = `/${module}.ts`;
+                            return updateState(
+                                (state : State) =>
+                                    state.modulePaths.indexOf(path) >= 0
+                                               ? {currentModulePath: path}
+                                               : {
+                                                   moduelPaths: state.modulePaths.concat([path]),
+                                                   currentModulePath: path
+                                               });
+                        }
+                        return;
+                    });
 
-        const HistoryElem = History.mk(handle);
-        const NavBarElem = NavBar.mk(handle);
-        const NavDrawerElem = NavDrawer.mk(handle);
-        const EditorElem = Editor.mk(handle);
+        const HistoryElem = History.mk(internal);
+        const NavBarElem = NavBar.mk(internal);
+        const NavDrawerElem = NavDrawer.mk(internal);
+        const EditorElem = Editor.mk(internal);
         return {
             initialState: (props : In) => ({
                 ...props,
@@ -161,7 +180,7 @@ export const mk = part.mk<In, State, {}>(
                             defaultSize={deh}
                             size={eh}
                             allowResize={up}
-                            onChange={part.emit(handle, adt.ctor(EditorResize))}>
+                            onChange={internal.emit(EditorResize.mk)}>
                             <div ref={a => { articleDom = a; }}>
                                 <Article
                                     article={article}
@@ -180,15 +199,15 @@ export const mk = part.mk<In, State, {}>(
                 </div>
             },
             update: ({event}) => {
-                if (event._tag === part.Begin) {
+                if (part.Begin.is(event)) {
                     routePath(global.location.pathname);
                     const main = document.getElementById("gt-main") as HTMLElement;
                     const width = main.offsetWidth;
-                    articleDom.addEventListener("click", part.emit(handle, adt.ctor(PossibleModuleClick)));
-                    return handle(adt.mk(EditorWidth, width));
+                    articleDom.addEventListener("click", internal.emit(PossibleModuleClick.mk));
+                    return internal.run(EditorWidth.mk(width));
                 }
-                if (event._tag === part.End) {
-                    articleDom.removeEventListener("click", part.emit(handle, adt.ctor(PossibleModuleClick)));
+                if (part.End.is(event)) {
+                    articleDom.removeEventListener("click", internal.emit(PossibleModuleClick.mk));
                     return;
                 }
                 return;

@@ -1,21 +1,25 @@
 import {History, Location} from "history";
 import createHistory from "history/createBrowserHistory";
-import * as adt from "./adt";
 import * as part from "./part";
 import * as Future from "fluture";
 
 const history : History = createHistory();
 
-declare module "./adt" {
-    interface Cases<A, B, C> {
-        "LocationChange-cbf24f58-e5e0-45bb-a95d-04fe40135fa1" : Location;
+export class LocationChange {
+    [Symbol.species] : "0a874b3f-f712-4959-858b-d5901e05dd3b";
+
+    constructor(readonly location : Location) {}
+
+    static mk(location : Location) {
+        return new LocationChange(location);
+    }
+
+    static is<Z>(x : LocationChange | Z) : x is LocationChange {
+        return x instanceof LocationChange;
     }
 }
 
-export const LocationChange = "LocationChange-cbf24f58-e5e0-45bb-a95d-04fe40135fa1";
-
-export type Out =
-    adt.Case<typeof LocationChange>;
+export type Out = LocationChange;
 
 type In = {
     path : string;
@@ -23,17 +27,16 @@ type In = {
 
 export const mk = part.mk<In, {}, Out>(
     ({signal}) => {
-        const unregister =
-            history.listen(part.emit(signal, adt.ctor(LocationChange)));
+        const unregister = history.listen(signal.emit(LocationChange.mk));
         return {
             render: ({}) => null,
             update: ({event}) => {
-                if (event._tag === part.End) {
+                if (part.End.is(event)) {
                     unregister();
                     return Future.of((s : {}) => s);
                 }
-                if (event._tag === part.Change) {
-                    const {prevProps, props} = event._val;
+                if (part.Change.is(event)) {
+                    const {prevProps, props} = event;
                     if (prevProps.path !== props.path) {
                         history.push(props.path);
                     }

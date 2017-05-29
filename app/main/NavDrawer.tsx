@@ -2,7 +2,7 @@ import * as React from "react";
 import {ITreeNode, Tree, Tabs2 as Tabs, Tab2 as Tab} from "@blueprintjs/core";
 import * as Future from "fluture";
 import * as part from "./part";
-import * as adt from "./adt";
+import {fetchText} from "./fetch";
 
 declare module "./adt" {
     interface Cases<A, B, C> {
@@ -12,14 +12,32 @@ declare module "./adt" {
     }
 }
 
-export const NavChanged = "NavChanged-e902348a-b7be-4937-926f-863878f1d135";
+type NavChanged_ = {
+    type : string;
+};
 
-const global = window;
+export class NavChanged {
+    [Symbol.species] : "7ffa141c-fd01-45d5-9625-f8097fe03602";
+    readonly type : string;
 
-const getNavText = () : Future<Error, string> =>
-    Future.tryP(
-        () => global.fetch("doc/typenav").
-                     then(r => r.text()));
+    constructor(args : NavChanged_) {
+        Object.assign(this, args);
+    }
+
+    static mk(args : NavChanged_) {
+        return new NavChanged(args);
+    }
+
+    static is<Z>(x : NavChanged | Z) : x is NavChanged {
+        return x instanceof NavChanged;
+    }
+}
+
+const getNavText = () : Future<string, string> =>
+    fetchText("/doc/typenav").bimap(
+        ({reason}) => reason,
+        ({text}) => text
+    );
 
 type In = {
     currentName? : string;
@@ -29,8 +47,7 @@ type State = {
     typeNames: Array<string>;
 };
 
-export type Out =
-    adt.Case<typeof NavChanged>;
+export type Out = NavChanged;
 
 const typesList = part.mk<In, State, Out>(
     ({updateState, signal}) => {
@@ -40,10 +57,9 @@ const typesList = part.mk<In, State, Out>(
             initialState: _ => ({typeNames: []}),
             render: ({props, state}) => {
                 const nodeClick =
-                    part.emit(
-                        signal,
+                    signal.emit(
                         (n : ITreeNode) =>
-                            adt.mk(NavChanged, {type: "" + n.label}));
+                            NavChanged.mk({type: "" + n.label}));
                 return <Tree
                     contents={listNodes(state.typeNames, props.currentName)}
                     onNodeClick={nodeClick}

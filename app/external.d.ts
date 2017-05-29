@@ -60,6 +60,7 @@ declare module "fluture" {
         map<B>(f : (_:A) => B) : Future<E, B>;
         bimap<E1, A1>(g : (_:E) => E1, f : (_:A) => A1) : Future<E1, A1>;
         chain<B>(f : (_:A) => Future<E, B>) : Future<E, B>;
+        mapRej<E1>(f : (_:E) => E1) : Future<E1, A>;
         fork(rej : (_:E) => void, res : (_:A) => void) : () => void;
         value(res : (_:A) => void) : () => void;
         promise() : Promise<A>;
@@ -75,7 +76,7 @@ declare module "fluture" {
         encaseN<A0, E, A>(k : (a0 : A0, k : Nodeback<E, A>) => void) : Future<E, A>;
         encaseP<A0, E, A>(p : (a0 : A0) => Promise<A>) : (a:A) => Future<E, A>;
         ap<E, A, B>(fab : Future<E, (_:A) => B>, fa : Future<E, A>) : Future<A, B>;
-        parallel<E, A>(limit : number, fs : Array<Future<E, A>>) : Future<Error, Array<A>>;
+        parallel<E, A>(limit : number, fs : Array<Future<E, A>>) : Future<E, Array<A>>;
     }
 
     const Future : FutureStatic;
