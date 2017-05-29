@@ -1,6 +1,5 @@
 import * as React from "react";
 import * as part from "./part";
-import * as adt from "./adt";
 
 export class HomeClick {
     [Symbol.species] : "27c0bf92-6d40-45d7-a96c-0386509fea1d";

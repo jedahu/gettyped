@@ -95,12 +95,12 @@ export const mk = part.mk<In, State, {}>(
         }
 
         const internal =
-            part.Signal.none.
+            part.Signal.
                 handle<History.LocationChange>(
                     History.LocationChange.is,
                     ({location: {pathname}}) => {
                         routePath(pathname);
-                        return updateState((_ : State) => ({currentPath: pathname}));
+                        updateState((_ : State) => ({currentPath: pathname}));
                     }).
                 handle<NavBar.MenuClick>(
                     NavBar.MenuClick.is,
@@ -133,16 +133,15 @@ export const mk = part.mk<In, State, {}>(
                             target.hasAttribute("rundoc-module")) {
                             const module = target.getAttribute("rundoc-module");
                             const path = `/${module}.ts`;
-                            return updateState(
+                            updateState(
                                 (state : State) =>
                                     state.modulePaths.indexOf(path) >= 0
-                                               ? {currentModulePath: path}
-                                               : {
-                                                   moduelPaths: state.modulePaths.concat([path]),
-                                                   currentModulePath: path
-                                               });
+                                        ? {currentModulePath: path}
+                                        : {
+                                            moduelPaths: state.modulePaths.concat([path]),
+                                            currentModulePath: path
+                                        });
                         }
-                        return;
                     });
 
         const HistoryElem = History.mk(internal);
@@ -198,20 +197,26 @@ export const mk = part.mk<In, State, {}>(
                     </div>
                 </div>
             },
-            update: ({event}) => {
-                if (part.Begin.is(event)) {
-                    routePath(global.location.pathname);
-                    const main = document.getElementById("gt-main") as HTMLElement;
-                    const width = main.offsetWidth;
-                    articleDom.addEventListener("click", internal.emit(PossibleModuleClick.mk));
-                    return internal.run(EditorWidth.mk(width));
-                }
-                if (part.End.is(event)) {
-                    articleDom.removeEventListener("click", internal.emit(PossibleModuleClick.mk));
-                    return;
-                }
-                return;
-            }
+            update:
+                part.Signal.
+                     handle<part.Begin<In, State>>(
+                        part.Begin.is,
+                        () => {
+                            routePath(global.location.pathname);
+                            const main = document.getElementById("gt-main") as HTMLElement;
+                            const width = main.offsetWidth;
+                            articleDom.addEventListener("click", internal.emit(PossibleModuleClick.mk));
+                            return internal.run(EditorWidth.mk(width));
+                        }).
+                    handle<part.End<In, State>>(
+                        part.End.is,
+                        () => {
+                            articleDom.removeEventListener(
+                                "click",
+                                internal.emit(PossibleModuleClick.mk)
+                            );
+                        }).
+                    ignore<part.Change<In, State>>(part.Change.is)
         };
     });
 

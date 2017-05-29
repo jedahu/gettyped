@@ -9,7 +9,6 @@ import * as worker from "worker-loader?name=worker.[hash].js!../../worker";
 import tsconfig from "../tsconfig";
 import * as part from "../part";
 import * as Future from "fluture";
-import * as adt from "../adt";
 import {fetchText} from "../fetch";
 
 const wapi = makeApi<WAPI.Arg, WAPI.Ret>(new worker(), {
@@ -73,7 +72,7 @@ export const mk = part.mk<In, State, Out>(
             state.models[currentPath(state)];
 
         const internal =
-            part.Signal.none.
+            part.Signal.
                 handle<Buffer.ViewStatus>(
                     Buffer.ViewStatus.is,
                     ({path, state: vs}) =>
@@ -144,29 +143,24 @@ export const mk = part.mk<In, State, Out>(
                     </div>
                 </div>
             },
-            update: ({event}) => {
-                if (event instanceof part.Begin) {
-                    return;
-                }
-                if (event instanceof part.Change) {
-                    const {prevProps, props, state} = event;
-                    const prevPath = prevProps.currentPath;
-                    const ptl = pathToLoad(props);
-                    if (ptl != prevPath) {
-                        return getCreateModelTransitively(ptl, state).value(
-                            x =>
-                                internal.run(GetCreateModel.mk({
-                                    path: ptl,
-                                    data: x
-                                })))
-                    }
-                    return;
-                }
-                if (event instanceof part.End) {
-                    return;
-                }
-                return adt.done(event);
-            }
+            update:
+                part.Signal.
+                     ignore<part.Begin<In, State>>(part.Begin.is).
+                     handle<part.Change<In, State>>(
+                         part.Change.is,
+                         ({prevProps, props, state}) => {
+                             const prevPath = prevProps.currentPath;
+                             const ptl = pathToLoad(props);
+                             if (ptl != prevPath) {
+                                 getCreateModelTransitively(ptl, state).value(
+                                     x =>
+                                         internal.run(GetCreateModel.mk({
+                                             path: ptl,
+                                             data: x
+                                         })))
+                             }
+                         }).
+                     ignore<part.End<In, State>>(part.End.is)
         }
 });
 

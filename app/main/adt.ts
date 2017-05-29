@@ -1,50 +1,28 @@
-export const when =
-    <A, B, C>(
-        x : A | B,
-        test : (x : A | B) => x is A,
-        f : (_:A) => C,
-        g : (_:B) => C
-    ) : C =>
-    test(x) ? f(x) : g(x);
+import * as Func from "./func";
 
-export const or =
-    <A, B, C>(
-        test : (x : A | B) => x is A,
-        f : (_:A) => C,
-        g : (_:B) => C
-    ) : ((_ : A | B) => C) =>
-    x => test(x) ? f(x) : g(x);
+export class Union<A, B> {
+    [Symbol.species] : "41bd8fea-70cf-43cf-b597-63260e5a8691";
 
-export interface Cases<A = undefined, B = undefined, C = undefined> {
+    private constructor(readonly run : (_:A) => B) {}
+
+    static mk<A, B>(run : (_:A) => B) {
+        return new Union<A, B>(run);
+    }
+
+    static none<A>() {
+        return new Union<never, A>(done);
+    }
+
+    when<C>(
+        test : (x : A|C) => x is C,
+        f : (_:C) => B
+    ) {
+        return new Union<A | C, B>(ab => test(ab) ? f(ab) : this.run(ab));
+    }
+
+    ignore<C>(test : (x : A|C) => x is C, b : B) {
+        return new Union<A | C, B>(ab => test(ab) ? b : this.run(ab));
+    }
 }
 
-export type Case<T extends keyof Cases<A, B, C>, A = undefined, B = undefined, C = undefined> =
-    {_tag : T; _val : Cases<A, B, C>[T]};
-
-export const isCase =
-    <Z, T extends keyof Cases<A, B, C>, A = undefined, B = undefined, C = undefined>(tag : T, x : Case<T, A, B, C> | Z) : x is Case<T, A, B, C> =>
-    x.hasOwnProperty("_tag") && (x as any)._tag === tag;
-
-// type Cases<A> = {
-//     [T in keyof A] : Case<T, A[T]>;
-// };
-
-// type Sum<A> = Cases<A>[keyof A];
-
-export const mk  =
-    <T extends keyof Cases<A, B, C>, A = undefined, B = undefined, C = undefined>(tag : T, val : Cases<A, B, C>[T]) : Case<T, A, B, C> =>
-    ({_tag: tag, _val: val});
-
-export const ctor  =
-    <T extends keyof Cases<A, B, C>, A = undefined, B = undefined, C = undefined>(tag : T) => (val : Cases<A, B, C>[T]) : Case<T, A, B, C> =>
-    ({_tag: tag, _val: val});
-
-export const done = (_ : never) : any => {
-    throw new Error("Cases should be exhausted.");
-};
-
-// export const mkSum = <C, S extends Sum<C>>() => ({
-//     ctor: <T extends keyof C>(tag : T) => (val : C[T]) : Case<T, C[T]> => ({_tag: tag, _val: val}),
-//     mk: <T extends keyof C>(tag : T, val : C[T]) : Case<T, C[T]> => ({_tag: tag, _val: val}),
-//     fold: <A>(x : S, fs : CaseFold<C, A>) : A => fs[x._tag](x._val)
-//     });
+export const done = Func.absurd;

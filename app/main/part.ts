@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as Func from "./func";
 
 type Begin_<A, I> = {
     props : A;
@@ -74,11 +75,9 @@ export class End<A, I> {
 }
 
 export class Signal<A> {
-    readonly run : (_:A) => void;
+    [Symbol.species]: "f1433f30-848f-4c64-a2c4-92e8bcf176ad";
 
-    constructor(run : (_:A) => void) {
-        this.run = run;
-    }
+    private constructor(readonly run : (_:A) => void) {}
 
     static mk<A>(run : (_:A) => void) : Signal<A> {
         return new Signal<A>(run);
@@ -87,22 +86,30 @@ export class Signal<A> {
     static readonly none : Signal<never> =
         new Signal<never>(_ => {});
 
+    static handle<A>(
+        test : (x : A|never) => x is A,
+        f : (_:A) => void
+    ) : Signal<A> {
+        return Signal.none.handle(test, f);
+    }
+
+    static ignore<A>(test : (x : A|never) => x is A) : Signal<A> {
+        return Signal.none.ignore(test);
+    }
+
     handle<B>(
         test : (x : A|B) => x is B,
         f : (_:B) => void
     ) : Signal<A | B> {
-        return Signal.mk<A | B>(ab => {
-            if (test(ab)) {
-                f(ab);
-            }
-            else {
-                this.run(ab);
-            }
-        });
+        return new Signal<A | B>(ab => test(ab) ? f(ab) : this.run(ab));
+    }
+
+    ignore<B>(test : (x : A|B) => x is B) : Signal<A | B> {
+        return this.handle(test, _ => {});
     }
 
     emit<B>(f : (_:B) => A) : Signal<B>["run"] {
-        return b => this.run(f(b));
+        return Func.contramap(this.run, f);
     }
 }
 
@@ -112,10 +119,7 @@ type PartEvent<A, I> = Begin<A, I> | Change<A, I> | End<A, I>;
 
 export type Event<A, I> = PartEvent<A, I>;
 
-type Update<A, I> =
-    (args : {
-        event : PartEvent<A, I>
-    }) => void;
+type Update<A, I> = Signal<PartEvent<A, I>>;
 
 type Create<A, I, S> =
     (args : {
@@ -157,36 +161,35 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
 
         this.componentDidMount = () => {
             if (update) {
-                update({
-                    event: Begin.mk({
+                update.run(
+                    Begin.mk({
                         props: this.props.props,
                         state: this.state
-                    })
-                });
+                    }));
             }
         };
 
         this.componentDidUpdate = (prevProps, prevState) => {
             if (update) {
-                update({
-                    event: Change.mk({
+                update.run(
+                    Change.mk({
                         prevProps: prevProps.props,
                         prevState,
                         props: this.props.props,
                         state: this.state
                     })
-                });
+);
             }
         };
 
         this.componentWillUnmount = () => {
             if (update) {
-                update({
-                    event: End.mk({
+                update.run(
+                    End.mk({
                         props: this.props.props,
                         state: this.state
                     })
-                });
+);
             }
         };
     }

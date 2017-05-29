@@ -1,6 +1,5 @@
 import * as React from "react";
 import * as part from "../part";
-import * as adt from "../adt";
 
 type ViewStatus_ = {
     path : string;
@@ -80,49 +79,49 @@ export const mk = part.mk<In, State, Out>(
                 };
                 return <div style={style} ref={a => {domPeer = a;}}></div>;
             },
-            update: ({event}) => {
-                if (event instanceof part.Begin) {
-                    const {props} = event;
-                    editor = monaco.editor.create(domPeer, {
-                        model: props.modelData.model,
-                        lineNumbers: "off"
-                    });
-                    editor.onDidChangeModelDecorations(
-                        signal.emit(_ => ValidationStatus.mk({
-                            valid: !editor.getModel().getAllDecorations().find(
-                                d => d.isForValidation)
-                        })));
-                    setTimeout(() => {
-                        global.requestAnimationFrame(() => {
-                            editor.layout({height: props.height, width: props.width});
-                            global.addEventListener("resize", autoResize);
-                        });
-                    }, 1);
-                    return;
-                }
-                if (event instanceof part.Change) {
-                    const {prevProps, props} = event;
-                    if (editor) {
-                        if (prevProps.modelData.path !== props.modelData.path) {
-                            signal.run(ViewStatus.mk({
-                                path: prevProps.modelData.path,
-                                state: editor.saveViewState()
-                            }));
-                            editor.setModel(props.modelData.model);
-                            if (props.modelData.viewState) {
-                                editor.restoreViewState(props.modelData.viewState);
+            update:
+                part.Signal.
+                    handle<part.Begin<In, State>>(
+                        part.Begin.is,
+                        ({props}) => {
+                            editor = monaco.editor.create(domPeer, {
+                                model: props.modelData.model,
+                                lineNumbers: "off"
+                            });
+                            editor.onDidChangeModelDecorations(
+                                signal.emit(_ => ValidationStatus.mk({
+                                    valid: !editor.getModel().getAllDecorations().find(
+                                        d => d.isForValidation)
+                                })));
+                            setTimeout(() => {
+                                global.requestAnimationFrame(() => {
+                                    editor.layout({height: props.height, width: props.width});
+                                    global.addEventListener("resize", autoResize);
+                                });
+                            }, 1);
+                        }).
+                    handle<part.Change<In, State>>(
+                        part.Change.is,
+                        ({prevProps, props}) => {
+                            if (editor) {
+                                if (prevProps.modelData.path !== props.modelData.path) {
+                                    signal.run(ViewStatus.mk({
+                                        path: prevProps.modelData.path,
+                                        state: editor.saveViewState()
+                                    }));
+                                    editor.setModel(props.modelData.model);
+                                    if (props.modelData.viewState) {
+                                        editor.restoreViewState(props.modelData.viewState);
+                                    }
+                                }
+                                editor.layout({height: props.height, width: props.width});
+                                editor.focus();
                             }
-                        }
-                        editor.layout({height: props.height, width: props.width});
-                        editor.focus();
-                    }
-                    return;
-                }
-                if (event instanceof part.End) {
-                    global.removeEventListener("resize", autoResize);
-                    return;
-                }
-                return adt.done(event);
-            }
+                        }).
+                    handle<part.End<In, State>>(
+                        part.End.is,
+                        () => {
+                            global.removeEventListener("resize", autoResize)
+                        })
         };
     });
