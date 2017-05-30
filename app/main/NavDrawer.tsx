@@ -34,7 +34,7 @@ export class NavChanged {
 }
 
 const getNavText = () : Future<string, string> =>
-    fetchText("/doc/typenav").bimap(
+    fetchText("/doc/type.nav").bimap(
         ({reason}) => reason,
         ({text}) => text
     );

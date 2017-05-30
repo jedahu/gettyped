@@ -12,7 +12,7 @@ export class PathChange {
     [Symbol.species] : "343badc0-ef34-479e-96e8-e3ec31c2732a";
     readonly path : string;
 
-    private constructor(args : PathChange_) {
+    constructor(args : PathChange_) {
         this.path = args.path;
     }
 
@@ -33,7 +33,7 @@ export class ToggleDisplay {
     [Symbol.species] : "1d7513cf-b2e2-4947-ad6e-d2aeaa422ab4";
     readonly visible : boolean;
 
-    private constructor(args : ToggleDisplay_) {
+    constructor(args : ToggleDisplay_) {
         this.visible = args.visible;
     }
 

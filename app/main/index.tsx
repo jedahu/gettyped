@@ -96,38 +96,38 @@ export const mk = part.mk<In, State, {}>(
 
         const internal =
             part.Signal.
-                handle<History.LocationChange>(
-                    History.LocationChange.is,
+                handle(
+                    History.LocationChange,
                     ({location: {pathname}}) => {
                         routePath(pathname);
                         updateState((_ : State) => ({currentPath: pathname}));
                     }).
-                handle<NavBar.MenuClick>(
-                    NavBar.MenuClick.is,
+                handle(
+                    NavBar.MenuClick,
                     () => updateState((s : State) => ({showNav: !s.showNav}))).
-                handle<NavBar.HomeClick>(
-                    NavBar.HomeClick.is,
+                handle(
+                    NavBar.HomeClick,
                     () => updateState((_ : State) => ({currentPath: "/"}))).
-                handle<NavDrawer.NavChanged>(
-                    NavDrawer.NavChanged.is,
+                handle(
+                    NavDrawer.NavChanged,
                     ({type}) => updateState((_ : State) => ({currentPath: `/type:${type}`}))).
-                handle<Editor.PathChange>(
-                    Editor.PathChange.is,
+                handle(
+                    Editor.PathChange,
                     ({path}) => updateState((_ : State) => ({currentModulePath: path}))).
-                handle<Editor.ToggleDisplay>(
-                    Editor.ToggleDisplay.is,
+                handle(
+                    Editor.ToggleDisplay,
                     () => updateState(
                         (s : State) => ({
                             editorDisplay: {visible : !s.editorDisplay.visible}
                         }))).
-                handle<EditorResize>(
-                    EditorResize.is,
+                handle(
+                    EditorResize,
                     ({length}) => updateState((_ : State) => ({editorHeight: length}))).
-                handle<EditorWidth>(
-                    EditorWidth.is,
+                handle(
+                    EditorWidth,
                     ({width}) => updateState((_ : State) => ({editorWidth: width}))).
-                handle<PossibleModuleClick>(
-                    PossibleModuleClick.is,
+                handle(
+                    PossibleModuleClick,
                     ({event: {target}}) => {
                         if (target instanceof HTMLElement &&
                             target.hasAttribute("rundoc-module")) {
@@ -200,7 +200,7 @@ export const mk = part.mk<In, State, {}>(
             update:
                 part.Signal.
                      handle<part.Begin<In, State>>(
-                        part.Begin.is,
+                        part.Begin,
                         () => {
                             routePath(global.location.pathname);
                             const main = document.getElementById("gt-main") as HTMLElement;
@@ -209,14 +209,14 @@ export const mk = part.mk<In, State, {}>(
                             return internal.run(EditorWidth.mk(width));
                         }).
                     handle<part.End<In, State>>(
-                        part.End.is,
+                        part.End,
                         () => {
                             articleDom.removeEventListener(
                                 "click",
                                 internal.emit(PossibleModuleClick.mk)
                             );
                         }).
-                    ignore<part.Change<In, State>>(part.Change.is)
+                    ignore<part.Change<In, State>>(part.Change)
         };
     });
 

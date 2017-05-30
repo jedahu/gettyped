@@ -47,7 +47,7 @@ export class GetCreateModel {
     readonly path : string;
     readonly data : ModelData;
 
-    private constructor(args : GetCreateModel_) {
+    constructor(args : GetCreateModel_) {
         Object.assign(this, args);
     }
 
@@ -74,7 +74,7 @@ export const mk = part.mk<In, State, Out>(
         const internal =
             part.Signal.
                 handle<Buffer.ViewStatus>(
-                    Buffer.ViewStatus.is,
+                    Buffer.ViewStatus,
                     ({path, state: vs}) =>
                         updateState((state : State, props : In) => {
                             const md = state.models[path];
@@ -82,7 +82,7 @@ export const mk = part.mk<In, State, Out>(
                             return state;
                         })).
                 handle<Buffer.ValidationStatus>(
-                    Buffer.ValidationStatus.is,
+                    Buffer.ValidationStatus,
                     ({valid}) =>
                         updateState((state : State, props : In) => {
                             const md = currentModelData(state);
@@ -90,7 +90,7 @@ export const mk = part.mk<In, State, Out>(
                             return state;
                         })).
                 handle<GetCreateModel>(
-                    GetCreateModel.is,
+                    GetCreateModel,
                     ({path, data}) =>
                         updateState((state : State) => ({
                             currentPath: path,
@@ -145,9 +145,9 @@ export const mk = part.mk<In, State, Out>(
             },
             update:
                 part.Signal.
-                     ignore<part.Begin<In, State>>(part.Begin.is).
+                     ignore<part.Begin<In, State>>(part.Begin).
                      handle<part.Change<In, State>>(
-                         part.Change.is,
+                         part.Change,
                          ({prevProps, props, state}) => {
                              const prevPath = prevProps.currentPath;
                              const ptl = pathToLoad(props);
@@ -160,7 +160,7 @@ export const mk = part.mk<In, State, Out>(
                                          })))
                              }
                          }).
-                     ignore<part.End<In, State>>(part.End.is)
+                     ignore<part.End<In, State>>(part.End)
         }
 });
 

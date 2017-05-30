@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as Func from "./func";
+import {Variant} from "./adt";
 
 type Begin_<A, I> = {
     props : A;
@@ -77,39 +78,39 @@ export class End<A, I> {
 export class Signal<A> {
     [Symbol.species]: "f1433f30-848f-4c64-a2c4-92e8bcf176ad";
 
-    private constructor(readonly run : (_:A) => void) {}
-
-    static mk<A>(run : (_:A) => void) : Signal<A> {
-        return new Signal<A>(run);
-    }
+    private constructor(readonly variant : Variant<A, void>) {}
 
     static readonly none : Signal<never> =
-        new Signal<never>(_ => {});
+        new Signal<never>(Variant.none<void>());
 
     static handle<A>(
-        test : (x : A|never) => x is A,
+        ctor : new (..._ : any[]) => A,
         f : (_:A) => void
     ) : Signal<A> {
-        return Signal.none.handle(test, f);
+        return Signal.none.handle(ctor, f);
     }
 
-    static ignore<A>(test : (x : A|never) => x is A) : Signal<A> {
-        return Signal.none.ignore(test);
+    static ignore<A>(ctor : new (..._ : any[]) => A) : Signal<A> {
+        return Signal.none.ignore(ctor);
     }
 
     handle<B>(
-        test : (x : A|B) => x is B,
+        ctor : new (..._ : any[]) => B,
         f : (_:B) => void
     ) : Signal<A | B> {
-        return new Signal<A | B>(ab => test(ab) ? f(ab) : this.run(ab));
+        return new Signal<A | B>(this.variant.when(ctor, f));
     }
 
-    ignore<B>(test : (x : A|B) => x is B) : Signal<A | B> {
-        return this.handle(test, _ => {});
+    ignore<B>(ctor : new (..._ : any[]) => B) : Signal<A | B> {
+        return this.handle(ctor, _ => {});
     }
 
-    emit<B>(f : (_:B) => A) : Signal<B>["run"] {
-        return Func.contramap(this.run, f);
+    emit<B>(f : (_:B) => A) : ((_:B) => void) {
+        return Func.contramap(this.variant.run, f);
+    }
+
+    run(a : A) {
+        return this.variant.run(a);
     }
 }
 

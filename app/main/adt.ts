@@ -1,4 +1,6 @@
 import * as Func from "./func";
+import {Nominal} from "./nominal";
+import {Map} from "immutable";
 
 export class Union<A, B> {
     [Symbol.species] : "41bd8fea-70cf-43cf-b597-63260e5a8691";
@@ -22,6 +24,34 @@ export class Union<A, B> {
 
     ignore<C>(test : (x : A|C) => x is C, b : B) {
         return new Union<A | C, B>(ab => test(ab) ? b : this.run(ab));
+    }
+}
+
+export class Variant<A, X> {
+    "@nominal" : "a649fb98-38ef-4925-89e5-8bf245e9a414";
+
+    private constructor(readonly cases : Map<{}, (_:any) => X>) {}
+
+    static none<X>() : Variant<never, X> {
+        return new Variant<never, X>(Map<{}, (_:any) => X>());
+    }
+
+    static when<A, X>(
+        ctor : new (..._ : any[]) => A,
+        f : (_:A) => X
+    ) : Variant<A, X> {
+        return new Variant<A, X>(Map<{}, (_:any) => X>([[ctor, f]]));
+    }
+
+    when<B>(
+        ctor : new (..._ : any[]) => B,
+        f : (_:B) => X
+    ) : Variant<A | B, X> {
+        return new Variant<A | B, X>(this.cases.set(ctor, f));
+    }
+
+    run(a : A) : X {
+        return this.cases.get(a.constructor)(a);
     }
 }
 

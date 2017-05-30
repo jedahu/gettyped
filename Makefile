@@ -1,24 +1,27 @@
 SHELL = /usr/bin/env bash -O globstar
 NBIN = $(shell yarn bin)
 
-SRC := $(shell find src -type f)
-DEMO := $(shell find demo -type f)
+SRC = $(shell find src -type f)
+DEMO = $(shell find demo -type f)
 DOC := $(shell find doc -type f)
 ORG := $(shell find doc -type f -iname '*.org')
 
-SITE_SRC := $(SRC:%=site/%)
-SITE_DEMO := $(DEMO:%=site/%)
+SITE_SRC = $(SRC:%=site/%)
+SITE_DEMO = $(DEMO:%=site/%)
 SITE_DOC := $(DOC:%=site/%)
 SITE_HTML := $(ORG:%.org=site/%.html)
 
 PANDOC_DEPS := $(shell find scripts -type f -iname 'pandoc-*')
 
+.PHONY: default
+default: site
+
 site/doc/%: doc/%
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	cp $< $@
 
 site/%.html: %.org $(PANDOC_DEPS)
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	pandoc -f org -t html5 \
 		-o $@ \
 		--parse-raw \
@@ -31,24 +34,28 @@ site/%.html: %.org $(PANDOC_DEPS)
 		$<
 
 site/src/%: src/%
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	cp $< $@
 
 site/demo/%: demo/%
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	cp $< $@
 
+site/module.nav: $(SITE_HTML)
+	@rm -rf $@
+	for path in $(SRC) $(DEMO); do echo $$path >>$@; done
+
 site/worker.js: out/app/worker/index.js
-	mkdir -p site
+	@mkdir -p site
 	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
 
 site/app.js: out/app/main/index.js
-	mkdir -p site
+	@mkdir -p site
 	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
 
 .PHONY: statics
 statics: $(shell ls static/**/*)
-	mkdir -p site
+	@mkdir -p site
 	cp -R static site/
 
 .PHONY: worker
@@ -61,8 +68,7 @@ app: site/app.js
 html: $(SITE_HTML)
 
 .PHONY: site
-site: html statics $(SITE_SRC) $(SITE_DEMO) $(SITE_DOC)
-# site: html worker app statics site/doc/typenav
+site: html statics $(SITE_SRC) $(SITE_DEMO) $(SITE_DOC) site/module.nav
 
 .PHONY: webpack
 webpack: html

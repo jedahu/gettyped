@@ -7,7 +7,7 @@ type ViewStatus_ = {
 };
 
 export class ViewStatus {
-    [Symbol.species] : "a0c14342-839e-4bcc-8554-ade4695108b6";
+    "@nominal" : "a0c14342-839e-4bcc-8554-ade4695108b6";
     readonly path : string;
     readonly state : ViewState;
 
@@ -82,7 +82,7 @@ export const mk = part.mk<In, State, Out>(
             update:
                 part.Signal.
                     handle<part.Begin<In, State>>(
-                        part.Begin.is,
+                        part.Begin,
                         ({props}) => {
                             editor = monaco.editor.create(domPeer, {
                                 model: props.modelData.model,
@@ -101,7 +101,7 @@ export const mk = part.mk<In, State, Out>(
                             }, 1);
                         }).
                     handle<part.Change<In, State>>(
-                        part.Change.is,
+                        part.Change,
                         ({prevProps, props}) => {
                             if (editor) {
                                 if (prevProps.modelData.path !== props.modelData.path) {
@@ -119,7 +119,7 @@ export const mk = part.mk<In, State, Out>(
                             }
                         }).
                     handle<part.End<In, State>>(
-                        part.End.is,
+                        part.End,
                         () => {
                             global.removeEventListener("resize", autoResize)
                         })
