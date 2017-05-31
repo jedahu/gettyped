@@ -1,13 +1,9 @@
 SHELL := /usr/bin/env bash -O globstar
 NBIN := $(shell yarn bin)
 
-SRC = $(shell find src -type f)
-DEMO = $(shell find demo -type f)
 DOC := $(shell find doc -type f)
 ORG := $(shell find doc -type f -iname '*.org')
 
-SITE_SRC = $(SRC:%=site/%)
-SITE_DEMO = $(DEMO:%=site/%)
 SITE_DOC := $(DOC:%=site/%)
 SITE_HTML := $(ORG:%.org=site/%.html)
 
@@ -33,25 +29,11 @@ site/%.html: %.org $(PANDOC_DEPS)
 		--filter scripts/pandoc-site-filter.js \
 		$<
 
-site/src/%: src/%
-	@mkdir -p $(dir $@)
-	cp $< $@
-
-site/demo/%: demo/%
-	@mkdir -p $(dir $@)
-	cp $< $@
-
 site/module.nav: $(SITE_HTML)
 	@rm -rf $@
-	for path in $(SRC) $(DEMO); do echo $$path >>$@; done
-
-site/worker.js: out/app/worker/index.js
-	@mkdir -p site
-	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
-
-site/app.js: out/app/main/index.js
-	@mkdir -p site
-	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
+	for path in $$(find src demo -type f); \
+		do echo $$path >>$@; \
+	done
 
 .PHONY: test
 test: site
@@ -62,21 +44,22 @@ test-repl: site
 	NODE_PATH=./:./src/ $(NBIN)/ts-node -P test
 
 .PHONY: statics
-statics: $(shell ls static/**/*)
-	@mkdir -p site
-	cp -R static site/
-
-.PHONY: worker
-worker: site/worker.js
-
-.PHONY: app
-app: site/app.js
+statics:
+	rsync -a static site
 
 .PHONY: html
 html: $(SITE_HTML)
 
+.PHONY: site-src
+site-src: html
+	rsync -a src site
+
+.PHONY: site-demo
+site-demo: html
+	rsync -a demo site
+
 .PHONY: site
-site: html statics $(SITE_SRC) $(SITE_DEMO) $(SITE_DOC) site/module.nav
+site: html statics site-src site-demo $(SITE_DOC) site/module.nav
 
 .PHONY: webpack
 webpack: html
