@@ -1,5 +1,5 @@
-SHELL = /usr/bin/env bash -O globstar
-NBIN = $(shell yarn bin)
+SHELL := /usr/bin/env bash -O globstar
+NBIN := $(shell yarn bin)
 
 SRC = $(shell find src -type f)
 DEMO = $(shell find demo -type f)
@@ -52,6 +52,14 @@ site/worker.js: out/app/worker/index.js
 site/app.js: out/app/main/index.js
 	@mkdir -p site
 	NODE_PATH=out $(NBIN)/browserify $< > $@ || (rm $@ && exit 1)
+
+.PHONY: test
+test: site
+	NODE_PATH=./:./src/ $(NBIN)/ts-node -P test test/demo.ts
+
+.PHONY: test-repl
+test-repl: site
+	NODE_PATH=./:./src/ $(NBIN)/ts-node -P test
 
 .PHONY: statics
 statics: $(shell ls static/**/*)

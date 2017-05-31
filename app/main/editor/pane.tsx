@@ -10,6 +10,7 @@ import tsconfig from "../tsconfig";
 import * as part from "../part";
 import * as Future from "fluture";
 import {fetchText} from "../fetch";
+import {Val} from "../adt";
 
 const wapi = makeApi<WAPI.Arg, WAPI.Ret>(new worker(), {
     dependencies: "dependencies",
@@ -37,28 +38,11 @@ type State = {
     models : {[path : string] : ModelData};
 };
 
-type GetCreateModel_ = {
-    path : string;
-    data : ModelData;
-};
-
-export class GetCreateModel {
-    [Symbol.species] : "f963eb3e-9eba-47df-b970-c77ff5413b08";
+export class GetCreateModel extends Val<{
     readonly path : string;
     readonly data : ModelData;
-
-    constructor(args : GetCreateModel_) {
-        Object.assign(this, args);
-    }
-
-    static mk(args : GetCreateModel_) {
-        return new GetCreateModel(args);
-    }
-
-    static is<Z>(x : GetCreateModel | Z) : x is GetCreateModel {
-        return x instanceof GetCreateModel;
-    }
-}
+},
+"f963eb3e-9eba-47df-b970-c77ff5413b08"> {}
 
 export const mk = part.mk<In, State, Out>(
     ({updateState, signal}) => {
@@ -75,7 +59,7 @@ export const mk = part.mk<In, State, Out>(
             part.Signal.
                 handle<Buffer.ViewStatus>(
                     Buffer.ViewStatus,
-                    ({path, state: vs}) =>
+                    ({val: {path, state: vs}}) =>
                         updateState((state : State, props : In) => {
                             const md = state.models[path];
                             md.viewState = vs;
@@ -83,7 +67,7 @@ export const mk = part.mk<In, State, Out>(
                         })).
                 handle<Buffer.ValidationStatus>(
                     Buffer.ValidationStatus,
-                    ({valid}) =>
+                    ({val: {valid}}) =>
                         updateState((state : State, props : In) => {
                             const md = currentModelData(state);
                             md.status = valid ? md.status & ~ModelStatus.Error : md.status | ModelStatus.Error;
@@ -91,7 +75,7 @@ export const mk = part.mk<In, State, Out>(
                         })).
                 handle<GetCreateModel>(
                     GetCreateModel,
-                    ({path, data}) =>
+                    ({val: {path, data}}) =>
                         updateState((state : State) => ({
                             currentPath: path,
                             models: {
@@ -148,13 +132,13 @@ export const mk = part.mk<In, State, Out>(
                      ignore<part.Begin<In, State>>(part.Begin).
                      handle<part.Change<In, State>>(
                          part.Change,
-                         ({prevProps, props, state}) => {
+                         ({val: {prevProps, props, state}}) => {
                              const prevPath = prevProps.currentPath;
                              const ptl = pathToLoad(props);
                              if (ptl != prevPath) {
                                  getCreateModelTransitively(ptl, state).value(
                                      x =>
-                                         internal.run(GetCreateModel.mk({
+                                         internal.run(new GetCreateModel({
                                              path: ptl,
                                              data: x
                                          })))

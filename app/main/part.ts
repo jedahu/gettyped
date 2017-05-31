@@ -1,82 +1,29 @@
 import * as React from "react";
 import * as Func from "./func";
-import {Variant} from "./adt";
+import {Val, Variant} from "./adt";
 
-type Begin_<A, I> = {
+export class Begin<A, I> extends Val<{
     props : A;
     state : I;
-};
+},
+"50f52568-41d7-4f6d-a04a-25f9bddd4e7d"> {}
 
-export class Begin<A, I> {
-    [Symbol.species] : "0f0d8cc7-c860-4a00-a724-f523873a1fb9";
-    readonly props : A;
-    readonly state : I;
-
-    constructor(args : Begin_<A, I>) {
-        Object.assign(this, args);
-    }
-
-    static mk<A, I>(args : Begin_<A, I>) {
-        return new Begin<A, I>(args);
-    }
-
-    static is<A, I, Z>(x : Begin<A, I> | Z) : x is Begin<A, I> {
-        return x instanceof Begin;
-    }
-}
-
-type Change_<A, I> = {
+export class Change<A, I> extends Val<{
     prevProps : A;
-    props: A;
-    prevState: I;
-    state: I;
-};
+    props : A;
+    prevState : I;
+    state : I;
+},
+"5cb63142-0d65-4f3f-b9f6-5ee164d9c1de"> {}
 
-export class Change<A, I> {
-    [Symbol.species] : "5cb63142-0d65-4f3f-b9f6-5ee164d9c1de";
-    readonly prevProps : A;
-    readonly props : A;
-    readonly prevState : I;
-    readonly state : I;
-
-    constructor(args : Change_<A, I>) {
-        Object.assign(this, args);
-    }
-
-    static mk<A, I>(args : Change_<A, I>) {
-        return new Change<A, I>(args);
-    }
-
-    static is<A, I, Z>(x : Change<A, I> | Z) : x is Change<A, I> {
-        return x instanceof Change;
-    }
-}
-
-type End_<A, I> = {
+export class End<A, I> extends Val<{
     props : A;
     state : I;
-};
-
-export class End<A, I> {
-    [Symbol.species] : "56a8806f-5fc5-470d-859e-9ae025364489";
-    readonly props : A;
-    readonly state : I;
-
-    constructor(args : End_<A, I>) {
-        Object.assign(this, args);
-    }
-
-    static mk<A, I>(args : End_<A, I>) {
-        return new End<A, I>(args);
-    }
-
-    static is<A, I, Z>(x : End<A, I> | Z) : x is End<A, I> {
-        return x instanceof End;
-    }
-}
+},
+"56a8806f-5fc5-470d-859e-9ae025364489"> {}
 
 export class Signal<A> {
-    [Symbol.species]: "f1433f30-848f-4c64-a2c4-92e8bcf176ad";
+    "@nominal": "f1433f30-848f-4c64-a2c4-92e8bcf176ad";
 
     private constructor(readonly variant : Variant<A, void>) {}
 
@@ -163,7 +110,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
         this.componentDidMount = () => {
             if (update) {
                 update.run(
-                    Begin.mk({
+                    new Begin({
                         props: this.props.props,
                         state: this.state
                     }));
@@ -173,24 +120,22 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
         this.componentDidUpdate = (prevProps, prevState) => {
             if (update) {
                 update.run(
-                    Change.mk({
+                    new Change({
                         prevProps: prevProps.props,
                         prevState,
                         props: this.props.props,
                         state: this.state
-                    })
-);
+                    }));
             }
         };
 
         this.componentWillUnmount = () => {
             if (update) {
                 update.run(
-                    End.mk({
+                    new End({
                         props: this.props.props,
                         state: this.state
-                    })
-);
+                    }));
             }
         };
     }

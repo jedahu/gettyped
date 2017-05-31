@@ -3,35 +3,12 @@ import {ITreeNode, Tree, Tabs2 as Tabs, Tab2 as Tab} from "@blueprintjs/core";
 import * as Future from "fluture";
 import * as part from "./part";
 import {fetchText} from "./fetch";
+import {Val} from "./adt";
 
-declare module "./adt" {
-    interface Cases<A, B, C> {
-        "NavChanged-e902348a-b7be-4937-926f-863878f1d135" : {
-            type : string;
-        };
-    }
-}
-
-type NavChanged_ = {
-    type : string;
-};
-
-export class NavChanged {
-    [Symbol.species] : "7ffa141c-fd01-45d5-9625-f8097fe03602";
+export class NavChanged extends Val<{
     readonly type : string;
-
-    constructor(args : NavChanged_) {
-        Object.assign(this, args);
-    }
-
-    static mk(args : NavChanged_) {
-        return new NavChanged(args);
-    }
-
-    static is<Z>(x : NavChanged | Z) : x is NavChanged {
-        return x instanceof NavChanged;
-    }
-}
+},
+"7ffa141c-fd01-45d5-9625-f8097fe03602"> {}
 
 const getNavText = () : Future<string, string> =>
     fetchText("/doc/type.nav").bimap(
@@ -59,7 +36,7 @@ const typesList = part.mk<In, State, Out>(
                 const nodeClick =
                     signal.emit(
                         (n : ITreeNode) =>
-                            NavChanged.mk({type: "" + n.label}));
+                            new NavChanged({type: "" + n.label}));
                 return <Tree
                     contents={listNodes(state.typeNames, props.currentName)}
                     onNodeClick={nodeClick}

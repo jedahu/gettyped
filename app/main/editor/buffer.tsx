@@ -1,49 +1,17 @@
 import * as React from "react";
 import * as part from "../part";
+import {Val} from "../adt";
 
-type ViewStatus_ = {
-    path : string;
-    state : ViewState;
-};
-
-export class ViewStatus {
-    "@nominal" : "a0c14342-839e-4bcc-8554-ade4695108b6";
+export class ViewStatus extends Val<{
     readonly path : string;
     readonly state : ViewState;
+},
+"177a8882-5c0d-4302-a431-f155d656466b"> {}
 
-    constructor(args : ViewStatus_) {
-        Object.assign(this, args);
-    }
-
-    static mk(args : ViewStatus_) {
-        return new ViewStatus(args);
-    }
-
-    static is<Z>(x : ViewStatus | Z) : x is ViewStatus {
-        return x instanceof ViewStatus;
-    }
-}
-
-type ValidationStatus_ = {
-    valid : boolean;
-};
-
-export class ValidationStatus {
-    [Symbol.species] : "cf685aa9-4912-4c3f-a47d-f689e6928902";
+export class ValidationStatus extends Val<{
     readonly valid : boolean;
-
-    constructor(args : ValidationStatus_) {
-        this.valid = args.valid;
-    }
-
-    static mk(args : ValidationStatus_) {
-        return new ValidationStatus(args);
-    }
-
-    static is<Z>(x : ValidationStatus | Z) : x is ValidationStatus {
-        return x instanceof ValidationStatus;
-    }
-}
+},
+"cf685aa9-4912-4c3f-a47d-f689e6928902"> {}
 
 const global = window;
 
@@ -83,13 +51,13 @@ export const mk = part.mk<In, State, Out>(
                 part.Signal.
                     handle<part.Begin<In, State>>(
                         part.Begin,
-                        ({props}) => {
+                        ({val : {props}}) => {
                             editor = monaco.editor.create(domPeer, {
                                 model: props.modelData.model,
                                 lineNumbers: "off"
                             });
                             editor.onDidChangeModelDecorations(
-                                signal.emit(_ => ValidationStatus.mk({
+                                signal.emit(_ => new ValidationStatus({
                                     valid: !editor.getModel().getAllDecorations().find(
                                         d => d.isForValidation)
                                 })));
@@ -102,10 +70,10 @@ export const mk = part.mk<In, State, Out>(
                         }).
                     handle<part.Change<In, State>>(
                         part.Change,
-                        ({prevProps, props}) => {
+                        ({val: {prevProps, props}}) => {
                             if (editor) {
                                 if (prevProps.modelData.path !== props.modelData.path) {
-                                    signal.run(ViewStatus.mk({
+                                    signal.run(new ViewStatus({
                                         path: prevProps.modelData.path,
                                         state: editor.saveViewState()
                                     }));

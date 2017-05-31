@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-05-17 Wed]
+#+DATE: [2017-05-31 Wed]
 
 * Motivation
 
@@ -116,7 +116,7 @@ static unless<A>(test : boolean, val : () => A) : Maybe<A> {
 
 Assuming the following values:
 
-#+BEGIN_SRC ts :name t :module demo/data/maybe/null
+#+BEGIN_SRC ts :name t :module demo/data/maybe/null/name
 export class Name {
     first : string;
     last : string;
@@ -133,14 +133,14 @@ export const present = (n : Name) : string => `${n.first} ${n.last}\n`;
 
 A typical null-check,
 #+BEGIN_SRC ts :module demo/data/maybe/null/typicalCheck
-import * as t from "demo/data/maybe/null";
+import * as t from "demo/data/maybe/null/name";
 
-const line = (n : t.Name) : string =>
+const line = (n : t.Name|null) : string =>
       n === null ? t.absent() : t.present(n);
 
-const a = line(new t.Name("Lewis", "Caroll"));
+const a = line(new t.Name("Isaac", "Newton"));
 const b = line(null);
-$GT.show(a + b);
+console.log(a + b);
 #+END_SRC
 
 exhibits a lack of type safety in two ways:
@@ -149,27 +149,27 @@ exhibits a lack of type safety in two ways:
 check.
 
 #+BEGIN_SRC ts :module demo/re/data/maybe/null/notNullAssumption
-import * as t from "demo/data/maybe/null";
+import * as t from "demo/data/maybe/null/name";
 
-const line = (n : t.Name) : string =>
-      t.present(n);
+const line = (n : t.Name|null) : string =>
+      t.present(n as t.Name);
 
-const a = line(new t.Name("Lewis", "Caroll"));
+const a = line(new t.Name("Bertram", "Russell"));
 const b = line(null);
-$GT.show(a + b);
+console.log(a + b);
 #+END_SRC
 
 *Boolean blindness.* The compiler doesn’t stop accidental dereferencing, as in
 this transposition.
 #+BEGIN_SRC ts :module demo/re/data/maybe/null/accidentalDereference
-import * as t from "demo/data/maybe/null";
+import * as t from "demo/data/maybe/null/name";
 
-const line = (n : t.Name) : string =>
-      n === null ? t.present(n) : t.absent();
+const line = (n : t.Name|null) : string =>
+      n === null ? t.present(n as any as t.Name) : t.absent();
 
-const a = line(new t.Name("Lewis", "Caroll"));
+const a = line(new t.Name("Kurt", "Godel"));
 const b = line(null);
-$GT.show(a + b);
+console.log(a + b);
 #+END_SRC
 
 Boolean blindness is [[bb][well described by Robert Harper]]. Here’s the money quote:
@@ -193,40 +193,40 @@ find yourself in need of sat solvers to figure out what the hell is going on.
 ~Maybe~ solves both issues.
 #+BEGIN_SRC ts :module demo/data/maybe/null/solved
 import * as m from "data/maybe";
-import * as t from "demo/data/maybe/null";
+import * as t from "demo/data/maybe/null/name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       n.fold(t.absent, t.present);
 
-const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
+const a = line(m.Maybe.just(new t.Name("Q", "Cantor")));
 const b = line(m.Maybe.nothing<t.Name>());
-$GT.show(a + b);
+console.log(a + b);
 #+END_SRC
 
 *Assumption.* The programmer cannot get at the value of a ~Maybe~ without going
 through ~Maybe.fold~.
 #+BEGIN_SRC ts :module demo/ce/data/maybe/null/forcedToHandle
 import * as m from "data/maybe";
-import * as t from "demo/data/maybe/null";
+import * as t from "demo/data/maybe/null/name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       t.present(n);
 
 const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
 const b = line(m.Maybe.nothing<t.Name>());
-$GT.show(a + b);
+console.log(a + b);
 #+END_SRC
 
 *Boolean blindness.* ~Maybe.fold~ provides a value only to the ~just~ case, so
 accidental transposition results in a compile time error:
 #+BEGIN_SRC ts :module demo/ce/data/maybe/null/transpositionError
 import * as m from "data/maybe";
-import * as t from "demo/data/maybe/null";
+import * as t from "demo/data/maybe/null/name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       n.fold(t.present, t.absent)
 
 const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
 const b = line(m.Maybe.nothing<t.Name>());
-$GT.show(a + b);
+console.log(a + b);
 #+END_SRC

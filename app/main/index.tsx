@@ -6,50 +6,33 @@ import * as Editor from "./editor/pane";
 import * as SplitPane from "react-split-pane";
 import * as part from "./part";
 import * as Future from "fluture";
+import {Val} from "./adt";
 
 import style from "../../scss/vars";
 
 const global = window;
 
-export class EditorResize {
-    [Symbol.species] : "ab645753-4486-4d77-92ed-8989d67f4e6c";
-
-    constructor(readonly length : number) {}
-
-    static mk(length : number) {
-        return new EditorResize(length);
-    }
-
-    static is<Z>(x : EditorResize | Z) : x is EditorResize {
-        return x instanceof EditorResize;
+export class EditorResize extends Val<{
+    size: number;
+}, "ab645753-4486-4d77-92ed-8989d67f4e6c"> {
+    static mk(size : number) : EditorResize {
+        return new EditorResize({size});
     }
 }
 
-export class EditorWidth {
-    [Symbol.species] : "0386e151-22da-4ca5-8f3f-d95c3585218a";
-
-    constructor(readonly width : number) {}
-
-    static mk(width : number) {
-        return new EditorWidth(width);
-    }
-
-    static is<Z>(x : EditorWidth | Z) : x is EditorWidth {
-        return x instanceof EditorWidth;
+export class EditorWidth extends Val<{
+    width: number;
+}, "0386e151-22da-4ca5-8f3f-d95c3585218a"> {
+    static mk(width : number) : EditorWidth {
+        return new EditorWidth({width});
     }
 }
 
-export class PossibleModuleClick {
-    [Symbol.species] : "0386e151-22da-4ca5-8f3f-d95c3585218a";
-
-    constructor(readonly event : MouseEvent) {}
-
-    static mk(event : MouseEvent) {
-        return new PossibleModuleClick(event);
-    }
-
-    static is<Z>(x : PossibleModuleClick | Z) : x is PossibleModuleClick {
-        return x instanceof PossibleModuleClick;
+export class PossibleModuleClick extends Val<{
+event: MouseEvent;
+}, "0386e151-22da-4ca5-8f3f-d95c3585218a"> {
+    static mk(event: MouseEvent) : PossibleModuleClick {
+        return new PossibleModuleClick({event});
     }
 }
 
@@ -110,10 +93,10 @@ export const mk = part.mk<In, State, {}>(
                     () => updateState((_ : State) => ({currentPath: "/"}))).
                 handle(
                     NavDrawer.NavChanged,
-                    ({type}) => updateState((_ : State) => ({currentPath: `/type:${type}`}))).
+                    ({val: {type}}) => updateState((_ : State) => ({currentPath: `/type:${type}`}))).
                 handle(
                     Editor.PathChange,
-                    ({path}) => updateState((_ : State) => ({currentModulePath: path}))).
+                    ({val: {path}}) => updateState((_ : State) => ({currentModulePath: path}))).
                 handle(
                     Editor.ToggleDisplay,
                     () => updateState(
@@ -122,13 +105,13 @@ export const mk = part.mk<In, State, {}>(
                         }))).
                 handle(
                     EditorResize,
-                    ({length}) => updateState((_ : State) => ({editorHeight: length}))).
+                    ({val: length}) => updateState((_ : State) => ({editorHeight: length}))).
                 handle(
                     EditorWidth,
-                    ({width}) => updateState((_ : State) => ({editorWidth: width}))).
+                    ({val: width}) => updateState((_ : State) => ({editorWidth: width}))).
                 handle(
                     PossibleModuleClick,
-                    ({event: {target}}) => {
+                    ({val: {event: {target}}}) => {
                         if (target instanceof HTMLElement &&
                             target.hasAttribute("rundoc-module")) {
                             const module = target.getAttribute("rundoc-module");

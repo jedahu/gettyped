@@ -1,50 +1,19 @@
 import * as React from "react";
 import * as part from "../part";
+import {Val} from "../adt";
 
 import * as Selectivity from "selectivity/react";
 import "selectivity/styles/selectivity-react.css";
 
-type PathChange_ = {
-    path : string;
-};
-
-export class PathChange {
-    [Symbol.species] : "343badc0-ef34-479e-96e8-e3ec31c2732a";
+export class PathChange extends Val<{
     readonly path : string;
+},
+"343badc0-ef34-479e-96e8-e3ec31c2732a"> {}
 
-    constructor(args : PathChange_) {
-        this.path = args.path;
-    }
-
-    static mk(args : PathChange_) {
-        return new PathChange(args);
-    }
-
-    static is<Z>(x : PathChange | Z) : x is PathChange {
-        return x instanceof PathChange;
-    }
-}
-
-type ToggleDisplay_ = {
-    visible : boolean;
-};
-
-export class ToggleDisplay {
-    [Symbol.species] : "1d7513cf-b2e2-4947-ad6e-d2aeaa422ab4";
+export class ToggleDisplay extends Val<{
     readonly visible : boolean;
-
-    constructor(args : ToggleDisplay_) {
-        this.visible = args.visible;
-    }
-
-    static mk(args : ToggleDisplay_) {
-        return new ToggleDisplay(args);
-    }
-
-    static is<Z>(x : ToggleDisplay | Z) : x is ToggleDisplay {
-        return x instanceof ToggleDisplay;
-    }
-}
+},
+"1d7513cf-b2e2-4947-ad6e-d2aeaa422ab4"> {}
 
 type In = {
     paths : Array<{path : string, error : boolean, open : boolean}>;
@@ -75,18 +44,18 @@ export const mk = part.mk<In, {}, Out>(
                                 text: props.currentPath
                             }}
                             items={[].concat.apply([], [oerrs, oopen, orest])}
-                            onChange={signal.emit((x : {value : string}) => PathChange.mk({path: x.value}))}
+                            onChange={signal.emit((x : {value : string}) => new PathChange({path: x.value}))}
                         />
                     </div>
                     <div className="pt-navbar-group pt-align-right">{
                         props.display.visible
                         ? <button
                             className="pt-button pt-minimal pt-icon-double-chevron-down"
-                            onClick={signal.emit(_ => ToggleDisplay.mk({visible: false}))}
+                            onClick={signal.emit(_ => new ToggleDisplay({visible: false}))}
                         ></button>
                         : <button
                             className="pt-button pt-minimal pt-icon-double-chevron-up"
-                            onClick={signal.emit(_ => ToggleDisplay.mk({visible: true}))}
+                            onClick={signal.emit(_ => new ToggleDisplay({visible: true}))}
                         ></button>
                     }</div>
                 </nav>;

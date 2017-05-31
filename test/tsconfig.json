@@ -1,8 +1,15 @@
 {
-    "extends": "./tsconfig.json",
+    "extends": "../tsconfig.json",
+    "include": [
+        "./**/*.ts",
+        "../demo/**/*.ts",
+        "../src/**/*.ts"
+    ],
     "compilerOptions": {
-        "strictNullChecks": false
-    },
-    "include": ["./src/**/*.ts"],
-    "exclude": ["./src/demo-ce"]
+        "baseUrl": "../",
+        "paths": {
+            "demo/*": ["./demo/*"],
+            "data/*": ["./src/data/*"]
+        }
+    }
 }

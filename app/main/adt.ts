@@ -1,6 +1,16 @@
 import * as Func from "./func";
-import {Nominal} from "./nominal";
 import {Map} from "immutable";
+
+export class Val<A, T> {
+    "@nominal" : T;
+    "@val" : A;
+
+    constructor(readonly val : A) {}
+
+    static ctor<A, T, V extends Val<A, T>>(ctor : new (val : A) => V) {
+        return (val : A) => new ctor(val);
+    }
+}
 
 export class Union<A, B> {
     [Symbol.species] : "41bd8fea-70cf-43cf-b597-63260e5a8691";
