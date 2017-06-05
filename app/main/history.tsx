@@ -1,7 +1,6 @@
 import {History, Location} from "history";
 import createHistory from "history/createBrowserHistory";
 import * as part from "./part";
-import * as Future from "fluture";
 
 const history : History = createHistory();
 
@@ -30,19 +29,16 @@ export const mk = part.mk<In, {}, Out>(
         const unregister = history.listen(signal.emit(LocationChange.mk));
         return {
             render: ({}) => null,
-            update: ({event}) => {
-                if (part.End.is(event)) {
-                    unregister();
-                    return Future.of((s : {}) => s);
-                }
-                if (part.Change.is(event)) {
-                    const {prevProps, props} = event;
-                    if (prevProps.path !== props.path) {
-                        history.push(props.path);
-                    }
-                    return Future.of((s : {}) => s);
-                }
-                return Future.of((s : {}) => s);
-            }
+            update:
+                part.Signal.
+                     ignore(part.Begin).
+                     handle<part.Change<In, {}>>(
+                         part.Change,
+                         ({val: {prevProps, props}}) => {
+                             if (prevProps.path !== props.path) {
+                                 history.push(props.path);
+                             }
+                         }).
+                     handle(part.End, unregister)
         };
     });

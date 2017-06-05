@@ -105,10 +105,10 @@ export const mk = part.mk<In, State, {}>(
                         }))).
                 handle(
                     EditorResize,
-                    ({val: length}) => updateState((_ : State) => ({editorHeight: length}))).
+                    ({val: {size}}) => updateState((_ : State) => ({editorHeight: size}))).
                 handle(
                     EditorWidth,
-                    ({val: width}) => updateState((_ : State) => ({editorWidth: width}))).
+                    ({val: {width}}) => updateState((_ : State) => ({editorWidth: width}))).
                 handle(
                     PossibleModuleClick,
                     ({val: {event: {target}}}) => {
@@ -187,9 +187,13 @@ export const mk = part.mk<In, State, {}>(
                         () => {
                             routePath(global.location.pathname);
                             const main = document.getElementById("gt-main") as HTMLElement;
-                            const width = main.offsetWidth;
+                            global.setTimeout(() => {
+                                global.requestAnimationFrame(() => {
+                                    internal.run(EditorWidth.mk(main.offsetWidth));
+                                });
+                            }, 1);
                             articleDom.addEventListener("click", internal.emit(PossibleModuleClick.mk));
-                            return internal.run(EditorWidth.mk(width));
+                            window.addEventListener("resize", internal.emit(_ => EditorWidth.mk(main.offsetWidth)));
                         }).
                     handle<part.End<In, State>>(
                         part.End,

@@ -53,7 +53,7 @@ export class Signal<A> {
     }
 
     emit<B>(f : (_:B) => A) : ((_:B) => void) {
-        return Func.contramap(this.variant.run, f);
+        return Func.contramap(this.variant.run.bind(this.variant), f);
     }
 
     run(a : A) {
@@ -71,7 +71,7 @@ type Update<A, I> = Signal<PartEvent<A, I>>;
 
 type Create<A, I, S> =
     (args : {
-        updateState : (f : <K extends keyof I>(s:I, p:A) => Pick<I, K>) => void,
+        updateState : (f : (s:I, p:A) => Partial<I>) => void,
         signal : Signal<S>
     }) => {
         render : Render<A, I>;
@@ -89,7 +89,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
     readonly componentDidMount : () => void;
     readonly componentDidUpdate : (prevProps : CProps<A, I, S>, prevState : I) => void;
     readonly componentWillUnmount : () => void;
-    readonly updateState : (_ : <K extends keyof I>(s : I) => Pick<I, K>) => void;
+    readonly updateState : (_ : (s : I) => Partial<I>) => void;
 
     constructor(cprops : CProps<A, I, S>) {
         super(cprops);

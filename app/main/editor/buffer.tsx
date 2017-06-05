@@ -38,7 +38,7 @@ export const mk = part.mk<In, State, Out>(
     ({signal}) => {
         let editor : MEditor;
         let domPeer : HTMLDivElement;
-        const autoResize = () => editor.layout();
+        // const autoResize = () => editor.layout();
         return {
             render: ({props}) => {
                 const style = {
@@ -61,10 +61,9 @@ export const mk = part.mk<In, State, Out>(
                                     valid: !editor.getModel().getAllDecorations().find(
                                         d => d.isForValidation)
                                 })));
-                            setTimeout(() => {
+                            global.setTimeout(() => {
                                 global.requestAnimationFrame(() => {
                                     editor.layout({height: props.height, width: props.width});
-                                    global.addEventListener("resize", autoResize);
                                 });
                             }, 1);
                         }).
@@ -83,13 +82,13 @@ export const mk = part.mk<In, State, Out>(
                                     }
                                 }
                                 editor.layout({height: props.height, width: props.width});
-                                editor.focus();
+                                // editor.focus();
                             }
                         }).
                     handle<part.End<In, State>>(
                         part.End,
                         () => {
-                            global.removeEventListener("resize", autoResize)
+                            // global.removeEventListener("resize", autoResize)
                         })
         };
     });

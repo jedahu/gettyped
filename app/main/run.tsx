@@ -30,6 +30,7 @@ global.addEventListener(
             baseUrl: "/",
             typeRoots: ["node_modules/@types"],
             allowNonTsExtensions: false,
+            lib: ["es6", "dom"],
             jsx: undefined as any,
             paths: undefined as any
         });

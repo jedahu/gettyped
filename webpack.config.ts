@@ -52,7 +52,8 @@ module.exports = {
                 loader: "source-map-loader",
                 exclude: [
                     /node_modules\/fp-ts/,
-                    /node_modules\/whatwg-fetch/
+                    /node_modules\/whatwg-fetch/,
+                    /node_modules\/typescript/
                 ]
             },
             {
