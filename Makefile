@@ -62,11 +62,11 @@ site-demo: html
 site: html statics site-src site-demo $(SITE_DOC) site/module.nav
 
 .PHONY: webpack
-webpack: html
+webpack: site
 	$(NBIN)/webpack
 
 .PHONY: webpack-dev
-webpack-dev: html
+webpack-dev: site
 	NODE_ENV=development \
 	$(NBIN)/nodemon --watch webpack.config.ts \
 	$(NBIN)/webpack-dev-server --hot --watch

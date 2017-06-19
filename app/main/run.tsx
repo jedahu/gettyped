@@ -24,17 +24,19 @@ global.addEventListener(
         const AppElem = App.mk();
 
         const m = monaco;
-        m.languages.typescript.typescriptDefaults.setCompilerOptions({
+        const mts = m.languages.typescript;
+        mts.typescriptDefaults.setCompilerOptions({
             ...tsconfig,
             noEmit: false,
             baseUrl: "/",
             typeRoots: ["node_modules/@types"],
             allowNonTsExtensions: false,
             lib: ["es6", "dom"],
+            module: mts.ModuleKind.AMD,
             jsx: undefined as any,
             paths: undefined as any
         });
-        m.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+        mts.typescriptDefaults.setDiagnosticsOptions({
             noSemanticValidation: false,
             noSyntaxValidation: false
         });

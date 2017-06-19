@@ -121,6 +121,9 @@ module.exports = {
 
    devServer: {
        contentBase: "./site",
-       historyApiFallback: true
+       historyApiFallback: true,
+       disableHostCheck: true,
+       host: "0.0.0.0" /*,
+       allowedHosts: [ "210.54.32.44" ]*/
    }
 }

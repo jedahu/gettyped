@@ -106,8 +106,8 @@ const diagnostic = (d: ts.Diagnostic): api.Diagnostic => ({
     start: d.start,
     length: d.length,
     source: d.source,
-    moduleName: d.file.moduleName,
-    fileName: d.file.fileName,
+    moduleName: d.file && d.file.moduleName,
+    fileName: d.file && d.file.fileName,
     messages:
         typeof d.messageText === "string"
         ? [{text: d.messageText, code: d.code, category: d.category}]
@@ -119,6 +119,7 @@ const moduleDiagnostics = (name : string) : api.Diagnostics => {
     const semantics = lang.getSemanticDiagnostics(name + ".ts");
     return syntax.concat(semantics).map(diagnostic);
 }
+
 makeApi<api.Arg, api.Ret>({
     dependencies: (arg, cont) =>
         cont(codeDeps(arg)),

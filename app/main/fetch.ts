@@ -31,8 +31,9 @@ export type Result = Success | Failure;
 export const fetchText =
     (uri : string) : Future<Failure, Success> =>
     Future.tryP(() => global.fetch(uri)).
+    mapRej(obj => Failure.mk(JSON.stringify(obj))).
     chain(
         r =>
             r.ok
-            ? Future.tryP(() => r.text()).map(Success.mk)
+            ? Future.tryP<Failure, string>(() => r.text()).map(Success.mk)
             : Future.reject(Failure.mk(`${r.status} ${r.statusText}`)));

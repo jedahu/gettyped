@@ -86,9 +86,9 @@ type CProps<A, I, S> = {
 };
 
 export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>, I> {
-    readonly componentDidMount : () => void;
-    readonly componentDidUpdate : (prevProps : CProps<A, I, S>, prevState : I) => void;
-    readonly componentWillUnmount : () => void;
+    readonly _componentDidMount : () => void;
+    readonly _componentDidUpdate : (prevProps : CProps<A, I, S>, prevState : I) => void;
+    readonly _componentWillUnmount : () => void;
     readonly updateState : (_ : (s : I) => Partial<I>) => void;
 
     constructor(cprops : CProps<A, I, S>) {
@@ -107,7 +107,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
             state: this.state
         });
 
-        this.componentDidMount = () => {
+        this._componentDidMount = () => {
             if (update) {
                 update.run(
                     new Begin({
@@ -117,7 +117,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
             }
         };
 
-        this.componentDidUpdate = (prevProps, prevState) => {
+        this._componentDidUpdate = (prevProps, prevState) => {
             if (update) {
                 update.run(
                     new Change({
@@ -129,7 +129,7 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
             }
         };
 
-        this.componentWillUnmount = () => {
+        this._componentWillUnmount = () => {
             if (update) {
                 update.run(
                     new End({
@@ -138,6 +138,18 @@ export class ComponentPart<A, I, S> extends React.PureComponent<CProps<A, I, S>,
                     }));
             }
         };
+    }
+
+    componentDidMount() {
+        this._componentDidMount();
+    }
+
+    componentDidUpdate(prevProps : CProps<A, I, S>, prevState : I) {
+        this._componentDidUpdate(prevProps, prevState);
+    }
+
+    componentWillUnount() {
+        this._componentWillUnmount();
     }
 }
 

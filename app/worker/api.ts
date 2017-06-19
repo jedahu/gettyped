@@ -34,12 +34,12 @@ export type DiagnosticMessage = {
 };
 
 export type Diagnostic = {
-    length: number;
-    fileName: string;
-    moduleName: string;
+    length: undefined | number;
+    fileName: undefined | string;
+    moduleName: undefined | string;
     messages: Array<DiagnosticMessage>;
-    source: string | undefined;
-    start: number;
+    source: undefined | string;
+    start: undefined | number;
 };
 
 export type Diagnostics = Array<Diagnostic>;
