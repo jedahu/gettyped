@@ -65,15 +65,17 @@ in pkgs.stdenv.mkDerivation {
   checkInputs = [modules-generator node-deps nodejs];
   doCheck = true;
   buildPhase = ''
+    cp -r "${monaco}" "static/vs"
     generate-site build
     mkdir "$out"
     cp -r _site/* "$out"
-    cp -r "${monaco}" "$out/vs"
   '';
   checkPhase = ''
+    set -e
     export PATH="$PATH:${nodejs}/bin"
     "${modules-generator}/bin/generate-modules" .
     cp -r "${node-deps}" node_modules
+    generate-site check
     NODE_PATH=. "./node_modules/.bin/ts-node" -P test test/demo.ts
   '';
 }

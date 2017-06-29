@@ -2,6 +2,7 @@
 module Main where
 
 import qualified GHC.IO.Encoding as E
+import System.Environment
 import Control.Applicative
 import Data.List
 import Data.Maybe
@@ -20,7 +21,10 @@ conf = defaultConfiguration
 cleanRoute :: Routes
 cleanRoute = customRoute createIndexRoute
   where
-    createIndexRoute ident = takeDirectory p </> takeBaseName p </> "index.html"
+    createIndexRoute ident =
+      if takeBaseName p == "index"
+      then takeDirectory p </> "index.html"
+      else takeDirectory p </> takeBaseName p </> "index.html"
       where
         p = toFilePath ident
 
@@ -86,3 +90,7 @@ main = do
     version "redirects" $ createRedirects
       [ ("index.html", "/doc/")
       ]
+
+    match "static/**" $ do
+      route $ gsubRoute "static/" (const "")
+      compile copyFileCompiler
