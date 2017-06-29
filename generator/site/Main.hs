@@ -49,18 +49,19 @@ moduleFilter = walk go
     go (CodeBlock (ident0, classes, attrs0) code) =
       let attrs     = M.fromList attrs0
           lang      = M.lookup "rundoc-language" attrs
+          name      = M.member "rundoc-name" attrs
           module_   = M.lookup "rundoc-module" attrs
           ident     = if ident0 == "" then Nothing else Just ident0
-          head      = maybe [] mkHead module_
+          head      = maybe [] (mkHead name) module_
           codeId    = fromMaybe "" (ident <|> (("module:" ++) <$> module_))
           codeBlock = CodeBlock (codeId, classes, attrs0) code
       in Div ("", [], []) (head ++ [codeBlock])
     go x = x
 
-    mkHead m = [ Header 5
-                 ("", ["gt-module-section"], [])
-                 [(Str ("\"" ++ m ++ "\""))]
-               ]
+    mkHead name m = [ Header 5
+                      ("", ["gt-module-section"], [])
+                      (if name then [(Str ("\"" ++ m ++ "\""))] else [])
+                    ]
 
 pandocReaderOpts :: ReaderOptions
 pandocReaderOpts = defaultHakyllReaderOptions

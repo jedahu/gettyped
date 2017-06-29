@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-06-28 Wed]
+#+DATE: [2017-06-29 Thu]
 
 * Motivation
 
@@ -192,7 +192,7 @@ find yourself in need of sat solvers to figure out what the hell is going on.
 
 ~Maybe~ solves both issues.
 #+BEGIN_SRC ts :module demo/data/maybe/null/solved
-import * as m from "data/maybe";
+import * as m from "demo/data/maybe/minimal";
 import * as t from "demo/data/maybe/null/name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
@@ -206,7 +206,7 @@ console.log(a + b);
 *Assumption.* The programmer cannot get at the value of a ~Maybe~ without going
 through ~Maybe.fold~.
 #+BEGIN_SRC ts :module demo/ce/data/maybe/null/forcedToHandle
-import * as m from "data/maybe";
+import * as m from "demo/data/maybe/minimal";
 import * as t from "demo/data/maybe/null/name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
