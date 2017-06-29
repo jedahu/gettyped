@@ -1,5 +1,7 @@
 import * as painless from "painless";
-import * as glob from "glob-fs";
+import * as globfs from "glob-fs";
+
+const glob = () => globfs({gitignore: false});
 
 const rePaths =
     glob().readdirSync("demo/re/**/*.ts");
@@ -11,6 +13,14 @@ const demoPaths =
     glob().
         readdirSync("demo/**/*.ts").
         filter((p : string) => !/\/(ce|re)\//.test(p));
+
+
+if (rePaths.length === 0 ||
+    cePaths.length === 0 ||
+    demoPaths.length === 0
+   ) {
+    throw new Error("Not all modules found");
+}
 
 
 const withSilentConsole = (go : () => void) => {

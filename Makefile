@@ -63,7 +63,8 @@ site: html statics site-src site-demo $(SITE_DOC) site/module.nav
 
 .PHONY: webpack
 webpack: site
-	$(NBIN)/webpack
+	$(NBIN)/webpack --config webpack.config.vendor.ts
+	$(NBIN)/webpack --config webpack.config.ts
 
 .PHONY: webpack-dev
 webpack-dev: site

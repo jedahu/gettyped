@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-05-31 Wed]
+#+DATE: [2017-06-28 Wed]
 
 * Motivation
 

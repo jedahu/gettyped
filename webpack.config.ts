@@ -10,7 +10,7 @@ const DEV = process.env.NODE_ENV === "development";
 
 const extractBundles = (bs : Array<any>) =>
        bs.map(b => new webpack.optimize.CommonsChunkPlugin(b));
- 
+
 const extractCss = new ExtractTextPlugin("styles.css");
 const extractSass = new ExtractTextPlugin({
     filename: "[name].[contenthash].css",
@@ -20,8 +20,6 @@ const extractSass = new ExtractTextPlugin({
 module.exports = {
     entry: {
         app: [
-            "promise-polyfill",
-            "whatwg-fetch",
             "./app/main/run.tsx"
         ]
     },
@@ -31,7 +29,7 @@ module.exports = {
         path: __dirname + "/site"
     },
 
-    devtool: "source-map",
+    devtool: false,
 
     resolve: {
         extensions: [".ts", ".tsx", ".js", ".json"]
@@ -43,18 +41,10 @@ module.exports = {
                 test: /\.tsx?$/,
                 loader: "awesome-typescript-loader",
                 options: {
-                    configFileName: "./app/main/tsconfig.json"
+                    configFileName: "./app/main/tsconfig.json",
+                    transpileOnly: true,
+                    useCache: true
                 }
-            },
-            {
-                enforce: "pre",
-                test: /\.js$/,
-                loader: "source-map-loader",
-                exclude: [
-                    /node_modules\/fp-ts/,
-                    /node_modules\/whatwg-fetch/,
-                    /node_modules\/typescript/
-                ]
             },
             {
                 test: /\.(txt|md)$/,
@@ -86,6 +76,10 @@ module.exports = {
    },
 
    plugins: [
+       new webpack.DllReferencePlugin({
+           context: ".",
+           manifest: require("./site/lib-vendor-manifest.json")
+       }),
        extractCss,
        extractSass,
        new FaviconsWebpackPlugin("./logo.png"),
@@ -103,14 +97,7 @@ module.exports = {
            from: `node_modules/monaco-editor/${DEV ? "dev" : "min"}/vs`,
            to: "vs"
        }])
-   ].concat(
-       extractBundles([{
-           name: "vendor",
-           minChunks: ({resource} : {resource : string}) =>
-               resource &&
-               resource.indexOf("node_modules") >= 0 &&
-               resource.endsWith(".js")
-       }])),
+   ],
 
    externals: {
    },
