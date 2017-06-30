@@ -3,7 +3,7 @@ variables:
 
 stages:
   - build
-  - deploy
+  - pages
 
 build:
   stage: build
@@ -15,11 +15,11 @@ build:
       - result-path
 
 pages:
-  stage: deploy
+  stage: pages
   script:
     - nix-shell -p rsync --run 'rsync -aL --chmod=u+w $(<result-path)/ public/'
   artifacts:
     paths:
-      - public
+      - public/
   only:
     - master
