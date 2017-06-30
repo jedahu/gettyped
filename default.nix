@@ -5,30 +5,19 @@
 let
   yarn = pkgs.yarn;
   nodejs = pkgs.nodejs;
-  site-generator = pkgs.stdenv.mkDerivation {
-    name = "gettyped-site-generator";
-    src = ./generator/site;
+  ghcWith = pkgs.haskellPackages.ghcWithPackages;
+  mkHsBin = name: mainDir: inputs: pkgs.stdenv.mkDerivation {
+    inherit name;
+    src = mainDir;
     phases = "unpackPhase buildPhase";
-    buildInputs = [
-      (pkgs.haskellPackages.ghcWithPackages (p: with p; [hakyll]))
-    ];
+    buildInputs = [(ghcWith inputs)];
     buildPhase = ''
       mkdir -p "$out/bin"
-      ghc -O2 --make Main.hs -o "$out/bin/generate-site"
+      ghc -O2 --make Main.hs -o "$out/bin/${name}";
     '';
   };
-  modules-generator = pkgs.stdenv.mkDerivation {
-    name = "gettyped-modules-generator";
-    src = ./generator/modules;
-    phases = "unpackPhase buildPhase";
-    buildInputs = [
-      (pkgs.haskellPackages.ghcWithPackages (p: with p; [pandoc]))
-    ];
-    buildPhase = ''
-      mkdir -p "$out/bin"
-      ghc -O2 --make Main.hs -o "$out/bin/generate-modules"
-    '';
-  };
+  module-extractor = mkHsBin "extract-modules" ./generator/modules (p: [p.pandoc]);
+  module-filter = mkHsBin "module-filter" ./generator/module-filter (p: [p.pandoc]);
   monaco = pkgs.stdenv.mkDerivation {
     name = "monaco-editor";
     src = pkgs.fetchurl {
@@ -56,26 +45,92 @@ let
       yarn --modules-folder "$out"
     '';
   };
+  page-html = path:
+    let template = ./template/page.html;
+    in pkgs.stdenv.mkDerivation {
+    name = "gettyped-page-html";
+    srcs = [path template];
+    sourceRoot = "srcroot";
+    phases = "unpackPhase buildPhase";
+    buildInputs = [pkgs.pandoc module-filter];
+    unpackPhase = ''
+      mkdir "$sourceRoot"
+      cp "${path}" "$sourceRoot/page.org"
+      cp "${template}" "$sourceRoot/template.html"
+    '';
+    buildPhase = ''
+      mkdir "$out"
+      pandoc -f org -t html5 -o "$out/page.html" \
+        --parse-raw \
+        --no-highlight \
+        --section-divs \
+        --toc \
+        --standalone \
+        --template template.html \
+        --filter module-filter \
+        page.org
+  '';
+  };
+  page-modules = path: pkgs.stdenv.mkDerivation {
+    name = "gettyped-page-modules";
+    src = path;
+    sourceRoot = "srcroot";
+    phases = "unpackPhase buildPhase";
+    buildInputs = [module-extractor];
+    unpackPhase = ''
+      mkdir "$sourceRoot"
+      cp "$src" "$sourceRoot/page.org"
+    '';
+    buildPhase = ''
+      extract-modules page.org "$out"
+    '';
+  };
+  gen-page = {path, absPath, ...}:
+    let html = page-html absPath;
+        modules = page-modules absPath;
+    in pkgs.stdenv.mkDerivation {
+      name = "gettyped-page";
+      src = absPath;
+      phases = "buildPhase";
+      buildInputs = [html modules];
+      buildPhase = ''
+        dir="$out/${path}"
+        mkdir -p "$dir"
+        ln -s "${html}/page.html" "$dir/index.html"
+        ln -s "${modules}" "$out/modules"
+      '';
+    };
+  page = {name, path}: {
+    inherit name path;
+    absPath = ./. + ("/" + path + ".org");
+  };
+  pageList = map page [
+    { name = "Maybe: null done properly";
+      path = "doc/type/Maybe";
+    }
+  ];
+  pages = map gen-page pageList;
 
 in pkgs.stdenv.mkDerivation {
   name = "gettyped-site";
   src = ./.;
   phases = "unpackPhase buildPhase checkPhase";
-  buildInputs = [site-generator monaco modules-generator node-deps nodejs yarn];
-  checkInputs = [modules-generator node-deps nodejs];
+  buildInputs = [monaco pkgs.rsync] ++ pages;
+  checkInputs = [node-deps nodejs];
   doCheck = true;
   buildPhase = ''
-    cp -r "${monaco}" "static/vs"
-    generate-site build
-    mkdir "$out"
-    cp -r _site/* "$out"
+    mkdir -p "$out/static"
+    ln -s "${monaco}" "$out/static/vs"
+    for p in ${builtins.concatStringsSep " " pages}
+    do
+      rsync -a "$p/" "$out/"
+    done
   '';
   checkPhase = ''
     set -e
     export PATH="$PATH:${nodejs}/bin"
-    "${modules-generator}/bin/generate-modules" .
     cp -r "${node-deps}" node_modules
-    generate-site check
+    rsync -aL "$out/modules/demo" .
     NODE_PATH=. "./node_modules/.bin/ts-node" -P test test/demo.ts
   '';
 }

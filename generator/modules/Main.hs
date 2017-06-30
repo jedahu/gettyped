@@ -4,7 +4,6 @@ import qualified GHC.IO.Encoding as E
 import System.Directory
 import System.Environment
 import System.Exit
-import System.FilePath.Glob
 import Control.Applicative
 import Control.Monad
 import qualified Data.Map as M
@@ -39,18 +38,15 @@ writeModule root (s, p) = do
     path = root </> p
     dir  = takeDirectory path
 
+fromRight :: (Show a) => Either a b -> b
+fromRight (Left a)  = error (show a)
+fromRight (Right b) = b
+
 main :: IO ()
 main = do
   E.setLocaleEncoding E.utf8
-  [root] <- getArgs
-  orgs   <- namesMatching "doc/**/*.org"
-  modules <- mapM getMods orgs
-  mapM_ (writeModule root) (join modules)
-  where
-    getMods p = do
-      s <- readFile p
-      case readOrg def s of
-        Left err -> do
-          putStrLn (show err)
-          exitWith (ExitFailure 1)
-        Right doc -> return (moduleQuery doc)
+  [org, root] <- getArgs
+  s <- readFile org
+  let doc = fromRight (readOrg def s)
+  let modules = moduleQuery doc
+  mapM_ (writeModule root) modules
