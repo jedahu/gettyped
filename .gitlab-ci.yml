@@ -1,0 +1,25 @@
+variables:
+  GIT_STRATEGY: fetch
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  script:
+    - nix-build
+    - realpath result > result-path
+  artifacts:
+    paths:
+      - result-path
+
+pages:
+  stage: deploy
+  script:
+    - nix-shell -p rsync --run 'rsync -aL --chmod=u+w $(<result-path)/ public/'
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
