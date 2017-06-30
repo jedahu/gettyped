@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+    <title>$title$</title>
+    <script src="/vs/loader.js"></script>
+  </head>
+  <body>
+    <article>
+        <header>
+            <h1 class="gt-page-title">$title$</h1>
+            <dl class="gt-provenance">
+                $if(date-meta)$
+                <dt>date</dt><dd>$date-meta$</dd>
+                $endif$
+                $if(keywords)$
+                <dt>keywords</dt><dd>$for(keywords)$$keywords$$sep$, $endfor$</dd>
+                $endif$
+            </dl>
+        </header>
+        $if(toc)$
+        <nav id="gt-toc">
+            $toc$
+        </nav>
+        $endif$
+        $body$
+    </article>
+  </body>
+</html>
