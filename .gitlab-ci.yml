@@ -8,7 +8,7 @@ stages:
 build:
   stage: build
   script:
-    - nix-build
+    - nix-build -A site
     - realpath result > result-path
   artifacts:
     paths:
