@@ -3,7 +3,9 @@
   <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
     <title>$title$</title>
-    <script src="/vs/loader.js"></script>
+    <link rel="stylesheet" href="$site-root$/main.css"/>
+    <script src="$site-root$/vs/loader.js"></script>
+    <script src="$site-root$/$main-js$"></script>
   </head>
   <body>
     <article>
@@ -23,7 +25,9 @@
             $toc$
         </nav>
         $endif$
-        $body$
+        <div id="gt-content">
+$body$
+        </div>
     </article>
   </body>
 </html>

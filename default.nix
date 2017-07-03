@@ -2,7 +2,10 @@
 
 { pkgs ? import <nixpkgs> {} }:
 
-let
+rec {
+  site-root = "/gettyped";
+  main-js = "main.js";
+  scrollbar-size = "7";
   yarn = pkgs.yarn;
   nodejs = pkgs.nodejs;
   ghcWith = pkgs.haskellPackages.ghcWithPackages;
@@ -45,6 +48,38 @@ let
       yarn --modules-folder "$out"
     '';
   };
+  compile-js = pkgs.stdenv.mkDerivation rec {
+    name = "compile-js";
+    srcs = [./ts ./tsconfig-base.json];
+    buildInputs = [node-deps nodejs];
+    phases = "unpackPhase buildPhase";
+    sourceRoot = "srcroot";
+    unpackPhase = ''
+      mkdir "$sourceRoot"
+      cp -r "${./ts}" "$sourceRoot/ts"
+      cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
+    '';
+    injected-js = ''
+      (function() {
+        window.__gt = {
+          tsconfig: ${builtins.readFile ./tsconfig-base.json},
+          siteRoot: "${site-root}",
+          scrollbarSize: ${scrollbar-size}
+        };
+      })();
+    '';
+    buildPhase = ''
+      mkdir "$out"
+      outjs="$out/${main-js}"
+      injected='${injected-js}'
+      "${node-deps}/.bin/tsc" \
+        --module AMD \
+        --outFile "built.js" \
+        --project "./ts/tsconfig.json"
+      echo "$injected" >"$outjs"
+      cat "built.js" >>"$outjs"
+    '';
+  };
   page-html = path:
     let template = ./template/page.html;
     in pkgs.stdenv.mkDerivation {
@@ -61,6 +96,8 @@ let
     buildPhase = ''
       mkdir "$out"
       pandoc -f org -t html5 -o "$out/page.html" \
+        -V site-root=${site-root} \
+        -V main-js=${main-js} \
         --parse-raw \
         --no-highlight \
         --section-divs \
@@ -102,7 +139,7 @@ let
     };
   page = {name, path}: {
     inherit name path;
-    absPath = ./. + ("/" + path + ".org");
+    absPath = ./. + ("/" + path + "/index.org");
   };
   pageList = map page [
     { name = "Maybe: null done properly";
@@ -110,27 +147,30 @@ let
     }
   ];
   pages = map gen-page pageList;
-
-in pkgs.stdenv.mkDerivation {
-  name = "gettyped-site";
-  src = ./.;
-  phases = "unpackPhase buildPhase checkPhase";
-  buildInputs = [monaco pkgs.rsync] ++ pages;
-  checkInputs = [node-deps nodejs];
-  doCheck = true;
-  buildPhase = ''
-    mkdir -p "$out/static"
-    ln -s "${monaco}" "$out/static/vs"
-    for p in ${builtins.concatStringsSep " " pages}
-    do
-      rsync -a "$p/" "$out/"
-    done
-  '';
-  checkPhase = ''
-    set -e
-    export PATH="$PATH:${nodejs}/bin"
-    cp -r "${node-deps}" node_modules
-    rsync -aL "$out/modules/demo" .
-    NODE_PATH=. "./node_modules/.bin/ts-node" -P test test/demo.ts
-  '';
+  site = pkgs.stdenv.mkDerivation {
+    name = "gettyped-site";
+    src = ./.;
+    phases = "unpackPhase buildPhase checkPhase";
+    buildInputs = [monaco compile-js pkgs.rsync] ++ pages;
+    checkInputs = [node-deps nodejs];
+    doCheck = true;
+    buildPhase = ''
+      mkdir -p "$out"
+      ln -s "${./static}" "$out/static"
+      ln -s "${./css/main.css}" "$out/main.css"
+      ln -s "${monaco}" "$out/vs"
+      ln -s "${compile-js}/${main-js}" "$out/${main-js}"
+      for p in ${builtins.concatStringsSep " " pages}
+      do
+        rsync -a "$p/" "$out/"
+      done
+    '';
+    checkPhase = ''
+      set -e
+      export PATH="$PATH:${nodejs}/bin"
+      cp -r "${node-deps}" node_modules
+      rsync -aL "$out/modules/demo" .
+      NODE_PATH=. "./node_modules/.bin/ts-node" -P test test/demo.ts
+    '';
+  };
 }

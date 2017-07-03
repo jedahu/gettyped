@@ -1,5 +1,6 @@
 {
     "dependencies": {
+        "@types/typescript": "^2.0.0",
         "almond": "^0.3.3",
         "fp-ts": "^0.2.7",
         "immutable": "^3.8.1",
