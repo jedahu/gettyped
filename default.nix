@@ -56,8 +56,9 @@ rec {
     sourceRoot = "srcroot";
     unpackPhase = ''
       mkdir "$sourceRoot"
-      cp -r "${./ts}" "$sourceRoot/ts"
-      cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
+      ln -s "${./ts}" "$sourceRoot/ts"
+      ln -s "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
+      cp -r "${node-deps}" "$sourceRoot/node_modules"
     '';
     injected-js = ''
       (function() {
@@ -73,8 +74,6 @@ rec {
       outjs="$out/${main-js}"
       injected='${injected-js}'
       "${node-deps}/.bin/tsc" \
-        --module AMD \
-        --outFile "built.js" \
         --project "./ts/tsconfig.json"
       echo "$injected" >"$outjs"
       cat "built.js" >>"$outjs"

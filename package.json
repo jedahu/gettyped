@@ -1,12 +1,10 @@
 {
     "dependencies": {
-        "@types/typescript": "^2.0.0",
-        "almond": "^0.3.3",
         "fp-ts": "^0.2.7",
         "immutable": "^3.8.1",
+        "json-formatter-js": "^2.2.0",
         "monaco-editor": "^0.8.3",
         "promise-polyfill": "^6.0.2",
-        "selectivity": "^3.0.4",
         "typescript": "^2.4.1",
         "whatwg-fetch": "^2.0.3"
     },

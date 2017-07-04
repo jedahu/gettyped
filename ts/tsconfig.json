@@ -1,7 +1,10 @@
 {
     "extends": "../tsconfig-base.json",
     "compilerOptions": {
-        "lib": ["es6", "dom"]
+        "lib": ["es2017", "es6", "dom"],
+        "allowJs": true,
+        "module": "amd",
+        "outFile": "../built.js"
     },
     "include": ["./d/*.d.ts", "./*.ts"]
 }
