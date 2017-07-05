@@ -32,6 +32,10 @@ rec {
       cp -r "min/vs" "$out"
     '';
   };
+  requirejs = pkgs.fetchurl {
+    url = "http://requirejs.org/docs/release/2.3.3/minified/require.js";
+    sha256 = "1bxc9bcyl88bbil1vcgvxc2npfcz7xx96xmrbsx0dq7mx1yrp90c";
+  };
   node-deps = pkgs.stdenv.mkDerivation {
     name = "node-deps";
     src = ./package.json;
@@ -158,6 +162,8 @@ rec {
       ln -s "${./static}" "$out/static"
       ln -s "${./css/main.css}" "$out/main.css"
       ln -s "${monaco}" "$out/vs"
+      ln -s "${requirejs}" "$out/require.js"
+      ln -s "${node-deps}/typescript/lib/lib.es6.d.ts" "$out/lib.es6.d.ts"
       ln -s "${compile-js}/${main-js}" "$out/${main-js}"
       for p in ${builtins.concatStringsSep " " pages}
       do

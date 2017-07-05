@@ -1,6 +1,6 @@
 import {getTsOpts} from "./tsconfig";
 import global from "./global";
-import {objMap, objValues, objEntries, arrayFlatMap} from "./util";
+import {assertNever, objMap, objValues, objEntries, arrayFlatMap} from "./util";
 
 declare function requestIdleCallback(f : () => void) : void;
 
@@ -21,17 +21,18 @@ type Module = {
 
 type Modules = {[path : string] : Module};
 
-const siteRoot = global.__gt.siteRoot;
 const scrollbarSize = global.__gt.scrollbarSize;
+const siteRoot = global.__gt.siteRoot;
 
-global.require.config({paths: {vs: `${siteRoot}/vs`}});
+const lib_es6_d_ts =
+    global.fetch(`${siteRoot}/lib.es6.d.ts`).
+    then(r => r.text());
 
-window.addEventListener(
-    "load",
+export const init =
     () => global.require([
         "vs/editor/editor.main",
         "vs/language/typescript/lib/typescriptServices"
-    ], (_ : any, ts : TS) => {
+    ] , (_ : any, ts : TS) => {
         const opts = getTsOpts(ts);
         const m = monaco;
         const mts = m.languages.typescript;
@@ -59,6 +60,8 @@ window.addEventListener(
             noSemanticValidation: false,
             noSyntaxValidation: false
         });
+        lib_es6_d_ts.then(
+            dts => mts.typescriptDefaults.addExtraLib(dts, "lib.es6.d.ts"));
 
         const snippetElems = document.getElementsByClassName("rundoc-block");
         const modules : Modules =
@@ -226,10 +229,15 @@ window.addEventListener(
             return s;
         };
 
+        const resetRequireError = () => {
+            global.require.onError = (e : any) => { throw e; };
+        };
+
         type RunRet =
             {tag : "diagnostics"; val : Array<{module : string; message : string}>}
             | {tag : "value"; val : any}
-            | {tag : "runtime"; val : Error};
+            | {tag : "runtime"; val : Error}
+            | {tag : "require"; val : {requireModules? : Array<string>}};
 
         const runModule =
             async (mod : Module, modules : Modules, log : (_:any) => void) : Promise<RunRet> => {
@@ -250,21 +258,29 @@ window.addEventListener(
                 }
                 else {
                     const js = await getJs(relevant);
+                    for (const m of relevant) {
+                        global.require.undef(m.path);
+                    }
                     try {
+                        const val = await new Function(`
+return new Promise(function(resolve, reject) {
+    ${js}
+    ;require.onError = reject;
+    require(['${mod.path}'], resolve, reject);
+});`)();
                         return {
                             tag: "value",
-                            val: await new Function(`
-return new Promise(function(resolve) {
-    ${js}
-    ;require(['${mod.path}'], function(m) { resolve(m.run()); });
-});`)()
+                            val
                         };
                     }
                     catch (e) {
                         return {
-                            tag: "runtime",
+                            tag: "require",
                             val: e
                         };
+                    }
+                    finally {
+                        resetRequireError();
                     }
                 }
             };
@@ -273,13 +289,19 @@ return new Promise(function(resolve) {
             async (mod : Module, modules : Modules) : Promise<void> => {
                 const x = await runModule(mod, modules, _ => {});
                 if (x.tag === "diagnostics") {
-                    console.log(x.val);
+                    console.log(x);
                 }
                 else if (x.tag === "value") {
-                    console.log(x.val);
+                    console.log(x);
                 }
                 else if (x.tag === "runtime") {
-                    console.log(x.val);
+                    console.log(x);
+                }
+                else if (x.tag === "require") {
+                    console.log(x);
+                }
+                else {
+                    assertNever(x);
                 }
             };
 
@@ -298,4 +320,4 @@ return new Promise(function(resolve) {
         window.addEventListener("resize", () => resizeEditors(modules));
 
         resizeEditors(modules);
-    }));
+    });

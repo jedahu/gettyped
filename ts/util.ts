@@ -19,3 +19,7 @@ export const arrayFlatMap = <A, B>(xs : Array<A>, f : (a:A) => Array<B>) : Array
     }
     return bs;
 };
+
+export const assertNever = (a : never) : never => {
+    throw new Error(`Expected never, got ${a}`);
+};
