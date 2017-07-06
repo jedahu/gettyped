@@ -32,8 +32,7 @@ const prequire = async (paths : Array<string>) : Promise<any> =>
             paths,
             function() {
                 res([].slice.call(arguments));
-            },
-            rej);
+            });
     }).
     then(
         x => {
@@ -321,8 +320,12 @@ export const init =
                 else if (x.tag === "runtime" || x.tag === "require") {
                     console.log(
                         x.val instanceof Error
-                        ? {tag: x.tag, val: x.val.message}
-                        : x);
+                            ? {
+                                tag: x.tag,
+                                val: x.val.message,
+                                module: (x.val as any).requireMap.name
+                            }
+                            : x);
                 }
                 else {
                     assertNever(x);

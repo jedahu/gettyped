@@ -99,16 +99,29 @@ rec {
   };
   page-modules = absPath: pkgs.stdenv.mkDerivation {
     name = "gettyped-page-modules";
-    src = absPath;
     sourceRoot = "srcroot";
-    phases = "unpackPhase buildPhase";
+    phases = "unpackPhase buildPhase checkPhase";
     buildInputs = [module-extractor];
+    checkInputs = [nodejs rsync];
     unpackPhase = ''
       mkdir "$sourceRoot"
-      cp "$src" "$sourceRoot/page.org"
+      cp "${absPath}" "$sourceRoot/page.org"
+      cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
+      cp "${./tsconfig.json}" "$sourceRoot/tsconfig.json"
+      cp -r "${./test}" "$sourceRoot/test"
     '';
     buildPhase = ''
       extract-modules page.org "$out"
+    '';
+    doCheck = true;
+    checkPhase = ''
+      export PATH="$PATH:${nodejs}/bin"
+      "${rsync}/bin/rsync" -aL "$out/" modules/
+      cp -r "${node-deps}" node_modules
+      NODE_PATH=.:./modules \
+        "./node_modules/.bin/ts-node" \
+        -P test \
+        test/demo.ts
     '';
   };
   gen-page = {path, absPath, ...}: {
@@ -163,10 +176,8 @@ rec {
   site = pkgs.stdenv.mkDerivation rec {
     name = "gettyped-site";
     src = ./.;
-    phases = "unpackPhase buildPhase checkPhase";
+    phases = "unpackPhase buildPhase";
     buildInputs = [rsync];
-    checkInputs = [nodejs];
-    doCheck = true;
     htmls = map (x: x.html) pages;
     modules = map (x: x.modules) pages;
     buildPhase = ''
@@ -183,15 +194,6 @@ rec {
       do
         rsync -aL "$m/" "$out/modules/"
       done
-    '';
-    checkPhase = ''
-      export PATH="$PATH:${nodejs}/bin"
-      cp -r "${node-deps}" node_modules
-      rsync -aL "$out/modules/demo" .
-      NODE_PATH=. \
-        "./node_modules/.bin/ts-node" \
-        -P test \
-        test/demo.ts
     '';
   };
 }

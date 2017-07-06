@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-06 Thu]
+#+DATE: [2017-07-07 Fri]
 
 * Motivation
 
@@ -38,7 +38,7 @@ ensures that the ~Nothing~ case is handled.
 
 * Minimal implementation
 
-#+BEGIN_SRC ts :name t :module demo/data/maybe/minimal
+#+BEGIN_SRC ts :module maybe-minimal
 export class Maybe<A> {
     static nothing<A>() : Maybe<A> {
         return new Maybe<A>(null);
@@ -62,61 +62,11 @@ export class Maybe<A> {
 }
 #+END_SRC
 
-* Extended API
-
-#+BEGIN_SRC ts
-or(other : () => Maybe<A>) : Maybe<A> {
-    return this.fold(other, _ => this);
-}
-
-valueOr(other : () => A) : A {
-    return this.fold(other, a => a);
-}
-
-map<B>(f : (a:A) => B) : Maybe<B> {
-    return this.fold(() => Maybe.nothing<B>(), a => Maybe.just<B>(f(a)));
-}
-
-flatMap<B>(f : (a:A) => Maybe<B>) : Maybe<B> {
-    return this.fold(() => Maybe.nothing<B>(), f);
-}
-
-zip<B>(other : Maybe<B>) : Maybe<[A, B]> {
-    return this.flatMap(a => other.map(b => <[A, B]>[a, b]));
-}
-
-justAct(f : (a:A) => void) : void {
-    this.fold(() => {}, f);
-}
-
-static catchError<A>(f : () => A) : Maybe<A> {
-    try {
-        return Maybe.just(f());
-    }
-    catch (_) {
-        return Maybe.nothing<A>();
-    }
-}
-
-static when<A>(test : boolean, val : () => A) : Maybe<A> {
-    return test ? Maybe.just(val()) : Maybe.nothing<A>();
-}
-
-static unless<A>(test : boolean, val : () => A) : Maybe<A> {
-    return Maybe.when(!test, val);
-}
-#+END_SRC
-
-* Extended implementation
-
-#+BEGIN_SRC ts :name t :module demo/data/maybe/extended
-#+END_SRC
-
 * Maybe vs null
 
 Assuming the following values:
 
-#+BEGIN_SRC ts :name t :module demo/data/maybe/null/name
+#+BEGIN_SRC ts :module name
 export class Name {
     first : string;
     last : string;
@@ -132,8 +82,8 @@ export const present = (n : Name) : string => `${n.first} ${n.last}\n`;
 #+END_SRC
 
 A typical null-check,
-#+BEGIN_SRC ts :module demo/data/maybe/null/typicalCheck
-import * as t from "demo/data/maybe/null/name";
+#+BEGIN_SRC ts :module typical-check
+import * as t from "name";
 
 const line = (n : t.Name|null) : string =>
       n === null ? t.absent() : t.present(n);
@@ -148,8 +98,8 @@ exhibits a lack of type safety in two ways:
 *Assumption.* The programmer assumes ~n~ is not ~null~ and doesn’t write the null
 check.
 
-#+BEGIN_SRC ts :module demo/re/data/maybe/null/notNullAssumption
-import * as t from "demo/data/maybe/null/name";
+#+BEGIN_SRC ts :module assume-not-null :error runtime
+import * as t from "name";
 
 const line = (n : t.Name|null) : string =>
       t.present(n as t.Name);
@@ -161,8 +111,8 @@ console.log(a + b);
 
 *Boolean blindness.* The compiler doesn’t stop accidental dereferencing, as in
 this transposition.
-#+BEGIN_SRC ts :module demo/re/data/maybe/null/accidentalDereference
-import * as t from "demo/data/maybe/null/name";
+#+BEGIN_SRC ts :module accidental-dereference :error runtime
+import * as t from "name";
 
 const line = (n : t.Name|null) : string =>
       n === null ? t.present(n as any as t.Name) : t.absent();
@@ -191,9 +141,9 @@ find yourself in need of sat solvers to figure out what the hell is going on.
 #+END_QUOTE
 
 ~Maybe~ solves both issues.
-#+BEGIN_SRC ts :module demo/data/maybe/null/solved
-import * as m from "demo/data/maybe/minimal";
-import * as t from "demo/data/maybe/null/name";
+#+BEGIN_SRC ts :module solved
+import * as m from "maybe-minimal";
+import * as t from "name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       n.fold(t.absent, t.present);
@@ -205,9 +155,9 @@ console.log(a + b);
 
 *Assumption.* The programmer cannot get at the value of a ~Maybe~ without going
 through ~Maybe.fold~.
-#+BEGIN_SRC ts :module demo/ce/data/maybe/null/forcedToHandle
-import * as m from "demo/data/maybe/minimal";
-import * as t from "demo/data/maybe/null/name";
+#+BEGIN_SRC ts :module forced-to-handle :error static
+import * as m from "maybe-minimal";
+import * as t from "name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       t.present(n);
@@ -219,9 +169,9 @@ console.log(a + b);
 
 *Boolean blindness.* ~Maybe.fold~ provides a value only to the ~just~ case, so
 accidental transposition results in a compile time error:
-#+BEGIN_SRC ts :module demo/ce/data/maybe/null/transpositionError
-import * as m from "demo/data/maybe/minimal";
-import * as t from "demo/data/maybe/null/name";
+#+BEGIN_SRC ts :module transposition-error :error static
+import * as m from "maybe-minimal";
+import * as t from "name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       n.fold(t.present, t.absent)

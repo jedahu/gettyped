@@ -1,27 +1,11 @@
 import * as painless from "painless";
 import * as globfs from "glob-fs";
+import * as fs from "fs";
 
 const glob = () => globfs({gitignore: false});
 
-const rePaths : Array<string> =
-    glob().readdirSync("demo/re/**/*.ts");
-
-const cePaths : Array<string> =
-    glob().readdirSync("demo/ce/**/*.ts");
-
-const demoPaths : Array<string> =
-    glob().
-        readdirSync("demo/**/*.ts").
-        filter((p : string) => !/\/(ce|re)\//.test(p));
-
-
-if (rePaths.length === 0 ||
-    cePaths.length === 0 ||
-    demoPaths.length === 0
-   ) {
-    throw new Error("Not all modules found");
-}
-
+const paths : Array<string> =
+    glob().readdirSync("modules/**/*.ts");
 
 const withSilentConsole = (go : () => void) => {
     const log = console.log;
@@ -34,37 +18,41 @@ const withSilentConsole = (go : () => void) => {
     }
 }
 
-
 const test = painless.createGroup();
 
-cePaths.forEach(
-    (p : string) =>
-        test(
-            "should fail to compile: " + p,
-            () =>
-                withSilentConsole(
-                    () =>
-                        painless.assert.throws(
-                            () => require(p),
-                            "Unable to compile TypeScript"))));
+const expectStaticError = (p : string) =>
+    test(
+        "should fail to compile: " + p,
+        () =>
+            withSilentConsole(
+                () =>
+                    painless.assert.throws(
+                        () => require(p),
+                        "Unable to compile TypeScript")));
 
-rePaths.forEach(
-    (p : string) =>
-        test(
-            "should fail at runtime: " + p,
-            () =>
-                withSilentConsole(
-                    () =>
-                        painless.assert.throws(
-                            () => require(p),
-                            /^(?!.*Unable to compile TypeScript)/))));
+const expectRuntimeError = (p : string) =>
+    test(
+        "should fail at runtime: " + p,
+        () =>
+            withSilentConsole(
+                () =>
+                    painless.assert.throws(
+                        () => require(p),
+                        /^(?!.*Unable to compile TypeScript)/)));
 
-demoPaths.forEach(
-    (p : string) =>
-        test(
-            "should succeed at runtime: " + p,
-            () =>
-                withSilentConsole(
-                    () =>
-                        painless.assert.doesNotThrow(
-                            () => require(p)))));
+const expectNoError = (p : string) =>
+    test(
+        "should succeed at runtime: " + p,
+        () =>
+            withSilentConsole(
+                () =>
+                    painless.assert.doesNotThrow(
+                        () => require(p))));
+
+for (const p of paths) {
+    fs.existsSync(p + ".se")
+        ? expectStaticError
+        : fs.existsSync(p + ".re")
+        ? expectRuntimeError(p)
+        : expectNoError(p);
+}
