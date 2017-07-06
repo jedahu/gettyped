@@ -1,23 +1,13 @@
 {
     "dependencies": {
-        "fp-ts": "^0.2.7",
-        "immutable": "^3.8.1",
-        "json-formatter-js": "^2.2.0",
-        "monaco-editor": "^0.8.3",
-        "promise-polyfill": "^6.0.2",
-        "typescript": "^2.4.1",
-        "whatwg-fetch": "^2.0.3"
     },
     "devDependencies": {
         "@types/node": "^8.0.5",
+        "typescript": "^2.4.1",
         "glob-fs": "^0.1.6",
-        "http-server": "^0.9.0",
         "painless": "^0.9.5",
-        "shx": "^0.2.2",
         "tern": "^0.21.0",
-        "ts-node": "^3.1.0",
-        "tsconfig-paths": "^2.1.2",
-        "tslint": "^5.1.0"
+        "ts-node": "^3.1.0"
     },
     "name": "gettyped",
     "version": "0.1.0",

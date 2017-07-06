@@ -21,6 +21,30 @@ type Module = {
 
 type Modules = {[path : string] : Module};
 
+const resetRequireError = () => {
+    global.require.onError = (e : any) => { throw e; };
+};
+
+const prequire = async (paths : Array<string>) : Promise<any> =>
+    new Promise((res, rej) => {
+        global.require.onError = rej;
+        global.require(
+            paths,
+            function() {
+                res([].slice.call(arguments));
+            },
+            rej);
+    }).
+    then(
+        x => {
+            resetRequireError();
+            return x;
+        },
+        e => {
+            resetRequireError();
+            throw e;
+        });
+
 const scrollbarSize = global.__gt.scrollbarSize;
 const siteRoot = global.__gt.siteRoot;
 
@@ -49,8 +73,6 @@ export const init =
             typeRoots: [],
             allowNonTsExtensions: false,
             lib: ["es6", "dom"],
-            inlineSourceMap: true,
-            inlineSources: true,
             noImplicitAny: true,
             module: mts.ModuleKind.AMD,
             jsx: undefined as any,
@@ -80,8 +102,11 @@ export const init =
                         const editor : Ed =
                             monaco.editor.create(sel, {
                                 model,
-                                lineNumbers: "off",
+                                lineNumbers: "on",
                                 scrollBeyondLastLine: false,
+                                minimap: {
+                                    enabled: false
+                                },
                                 scrollbar: {
                                     vertical: "hidden",
                                     horizontalScrollbarSize: scrollbarSize
@@ -205,15 +230,16 @@ export const init =
             };
 
         const getJs =
-            async (modules : Array<Module>) : Promise<string> => {
-                const emits = await Promise.all(
+            (modules : Array<Module>) : Promise<Array<string>> =>
+                Promise.all(
                     modules.map(async ({uri, path}) => {
                         const client = await getClient(uri);
                         const emitted = await client.getEmitOutput(uri.toString());
-                        return emitted.outputFiles[0].text.replace(/^define\(/, `define('${path}',`);
+                        return emitted.
+                            outputFiles[0].
+                            text.
+                            replace(/^define\(/, `define('${path}',`);
                     }));
-                return emits.join("\n;");
-            };
 
         const diagnosticMessage = (diag : ts.Diagnostic) : string => {
             const msg = diag.messageText;
@@ -229,15 +255,11 @@ export const init =
             return s;
         };
 
-        const resetRequireError = () => {
-            global.require.onError = (e : any) => { throw e; };
-        };
-
         type RunRet =
             {tag : "diagnostics"; val : Array<{module : string; message : string}>}
             | {tag : "value"; val : any}
-            | {tag : "runtime"; val : Error}
-            | {tag : "require"; val : {requireModules? : Array<string>}};
+            | {tag : "runtime"; val : any}
+            | {tag : "require"; val : any};
 
         const runModule =
             async (mod : Module, modules : Modules, log : (_:any) => void) : Promise<RunRet> => {
@@ -257,17 +279,19 @@ export const init =
                     }
                 }
                 else {
-                    const js = await getJs(relevant);
                     for (const m of relevant) {
                         global.require.undef(m.path);
                     }
                     try {
-                        const val = await new Function(`
-return new Promise(function(resolve, reject) {
-    ${js}
-    ;require.onError = reject;
-    require(['${mod.path}'], resolve, reject);
-});`)();
+                        const sources = await getJs(relevant);
+                        for (const src of sources) {
+                            new Function(src)();
+                        }
+                        const [m] = await prequire([mod.path]);
+                        const val =
+                            typeof m.run === "function"
+                            ? m.run()
+                            : undefined;
                         return {
                             tag: "value",
                             val
@@ -294,11 +318,11 @@ return new Promise(function(resolve, reject) {
                 else if (x.tag === "value") {
                     console.log(x);
                 }
-                else if (x.tag === "runtime") {
-                    console.log(x);
-                }
-                else if (x.tag === "require") {
-                    console.log(x);
+                else if (x.tag === "runtime" || x.tag === "require") {
+                    console.log(
+                        x.val instanceof Error
+                        ? {tag: x.tag, val: x.val.message}
+                        : x);
                 }
                 else {
                     assertNever(x);

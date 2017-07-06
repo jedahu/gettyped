@@ -4,13 +4,18 @@
     <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
     <title>$title$</title>
     <link rel="stylesheet" href="$site-root$/main.css"/>
-    <script src="$site-root$/require.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
     <script>
-        require.config({paths: {vs: "$site-root$/vs"}});
-     require([
-         "vs/editor/editor.main",
-         "vs/language/typescript/lib/typescriptServices"
-     ]);
+        require.config({paths: {vs: "https://unpkg.com/monaco-editor@0.9.0/min/vs"}});
+        window.MonacoEnvironment = {
+         		getWorkerUrl: function(workerId, label) {
+                return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
+            }
+        };
+        require([
+            "vs/editor/editor.main",
+            "vs/language/typescript/lib/typescriptServices"
+        ]);
     </script>
     <script src="$site-root$/$main-js$"></script>
   </head>

@@ -3,13 +3,13 @@ import * as globfs from "glob-fs";
 
 const glob = () => globfs({gitignore: false});
 
-const rePaths =
+const rePaths : Array<string> =
     glob().readdirSync("demo/re/**/*.ts");
 
-const cePaths =
+const cePaths : Array<string> =
     glob().readdirSync("demo/ce/**/*.ts");
 
-const demoPaths =
+const demoPaths : Array<string> =
     glob().
         readdirSync("demo/**/*.ts").
         filter((p : string) => !/\/(ce|re)\//.test(p));

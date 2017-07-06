@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-06-29 Thu]
+#+DATE: [2017-07-06 Thu]
 
 * Motivation
 
@@ -220,7 +220,7 @@ console.log(a + b);
 *Boolean blindness.* ~Maybe.fold~ provides a value only to the ~just~ case, so
 accidental transposition results in a compile time error:
 #+BEGIN_SRC ts :module demo/ce/data/maybe/null/transpositionError
-import * as m from "data/maybe";
+import * as m from "demo/data/maybe/minimal";
 import * as t from "demo/data/maybe/null/name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
