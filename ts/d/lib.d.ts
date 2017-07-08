@@ -12,3 +12,12 @@ declare module "object.entries" {
     const x : any;
     export = x;
 }
+
+declare interface Window {
+    require : any;
+    __gt : {
+        tsconfig : any;
+        siteRoot : string;
+        scrollbarSize : number;
+    };
+}

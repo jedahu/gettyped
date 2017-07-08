@@ -1,8 +1,6 @@
-import global from "./global";
-
 type TS = typeof ts;
 
-const jsonOpts : any = global.__gt.tsconfig;
+const jsonOpts : any = window.__gt.tsconfig;
 
 export const getTsOpts = (ts : TS) => ts.parseJsonConfigFileContent(
     jsonOpts,

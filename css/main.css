@@ -1,3 +1,5 @@
+/* * Pandoc */
+
 html {
   font-size: 100%;
   overflow-y: scroll;
@@ -103,8 +105,8 @@ h6 {
 blockquote {
   color: #666666;
   margin: 0;
-  padding-left: 3em;
-  border-left: 0.5em #EEE solid;
+  padding-left: 2em;
+  /* border-left: 0.5em #EEE solid; */
 }
 
 hr {
@@ -321,4 +323,85 @@ table td {
   h2, h3 {
     page-break-after: avoid;
   }
+}
+
+/* * GetTyped */
+
+summary {
+    display: inline-flex;
+    vertical-align: middle;
+    align-items: flex-end;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary > .gt-less-more::after {
+    content: 'expand_more';
+}
+
+details[open] > summary > .gt-less-more::after {
+    content: 'expand_less';
+}
+
+details.gt-module-section[open] {
+    /* box-shadow: 0 0 2px 0 black; */
+}
+
+details.gt-module-section[open] pre {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+details.gt-module-section[open] > summary ~ * {
+    border-left: 0.4em solid #eeeeff;
+}
+
+details.gt-module-section > summary {
+    font-size: 1em;
+    font-family: monospace;
+    color: navy;
+    width: 100%;
+    cursor: pointer;
+}
+
+button.material-icons {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.gt-action-run {
+    color: navy;
+}
+
+.gt-action-revert {
+    color: navy;
+}
+
+/* * Spinner */
+
+.gt-run-spinner {
+    animation: gt-run-spinner 1s infinite linear;
+}
+
+@keyframes gt-run-spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* * Annoyances */
+
+:focus {
+    outline: none;
+}
+
+html.visible-focus-outline :focus {
+    outline: currentColor dotted thin;
+    outline: 5px auto -webkit-focus-ring-color;
 }

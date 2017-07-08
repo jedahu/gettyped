@@ -21,7 +21,8 @@ rec {
     '';
   };
   module-extractor = mkHsBin "extract-modules" ./generator/modules (p: [p.pandoc]);
-  module-filter = mkHsBin "module-filter" ./generator/module-filter (p: [p.pandoc]);
+  # module-filter = mkHsBin "module-filter" ./generator/module-filter (p: [p.pandoc]);
+  html-filter = mkHsBin "html-filter" ./generator/html-filter (p: [p.pandoc p.tagsoup]);
   require-js = pkgs.fetchurl {
     url = "http://requirejs.org/docs/release/2.3.3/minified/require.js";
     sha256 = "1bxc9bcyl88bbil1vcgvxc2npfcz7xx96xmrbsx0dq7mx1yrp90c";
@@ -81,10 +82,10 @@ rec {
     in pkgs.stdenv.mkDerivation {
     name = "gettyped-page-html";
     phases = "buildPhase";
-    buildInputs = [pandoc module-filter];
+    buildInputs = [pandoc html-filter];
     buildPhase = ''
       mkdir -p "$out/${path}"
-      pandoc -f org -t html5 -o "$out/${path}/index.html" \
+      pandoc -f org -t html5 \
         -V site-root=${site-root} \
         -V main-js=${main-js} \
         --parse-raw \
@@ -93,8 +94,8 @@ rec {
         --toc \
         --standalone \
         --template "${template}" \
-        --filter module-filter \
-        "${absPath}"
+        "${absPath}" \
+        | html-filter >"$out/${path}/index.html"
   '';
   };
   page-modules = absPath: pkgs.stdenv.mkDerivation {

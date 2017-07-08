@@ -1,6 +1,6 @@
 import {getTsOpts} from "./tsconfig";
-import global from "./global";
 import {assertNever, objMap, objValues, objEntries, arrayFlatMap} from "./util";
+import {manageFocusOutlines} from "./focus-outline";
 
 declare function requestIdleCallback(f : () => void) : void;
 
@@ -17,18 +17,19 @@ type Module = {
     originalText : string;
     container : HTMLElement;
     runButton : HTMLElement;
+    revertButton : HTMLElement;
 };
 
 type Modules = {[path : string] : Module};
 
 const resetRequireError = () => {
-    global.require.onError = (e : any) => { throw e; };
+    window.require.onError = (e : any) => { throw e; };
 };
 
 const prequire = async (paths : Array<string>) : Promise<any> =>
     new Promise((res, rej) => {
-        global.require.onError = rej;
-        global.require(
+        window.require.onError = rej;
+        window.require(
             paths,
             function() {
                 res([].slice.call(arguments));
@@ -44,18 +45,19 @@ const prequire = async (paths : Array<string>) : Promise<any> =>
             throw e;
         });
 
-const scrollbarSize = global.__gt.scrollbarSize;
-const siteRoot = global.__gt.siteRoot;
+const scrollbarSize = window.__gt.scrollbarSize;
+const siteRoot = window.__gt.siteRoot;
 
 const lib_es6_d_ts =
-    global.fetch(`${siteRoot}/lib.es6.d.ts`).
+    window.fetch(`${siteRoot}/lib.es6.d.ts`).
     then(r => r.text());
 
 export const init =
-    () => global.require([
+    () => window.require([
         "vs/editor/editor.main",
         "vs/language/typescript/lib/typescriptServices"
     ] , (_ : any, ts : TS) => {
+        manageFocusOutlines(document, "visible-focus-outline");
         const opts = getTsOpts(ts);
         const m = monaco;
         const mts = m.languages.typescript;
@@ -84,16 +86,23 @@ export const init =
         lib_es6_d_ts.then(
             dts => mts.typescriptDefaults.addExtraLib(dts, "lib.es6.d.ts"));
 
-        const snippetElems = document.getElementsByClassName("rundoc-block");
+        const sections = document.getElementsByClassName("gt-module-section");
         const modules : Modules =
             objMap<Module>(
-                [].slice.call(snippetElems).
+                [].slice.call(sections).
                     filter(
-                        (sel : HTMLElement) =>
-                            sel.getAttribute("rundoc-language") === "ts" &&
-                            sel.getAttribute("rundoc-module")).
-                    map((sel : HTMLElement) => {
-                        const text = sel.innerText;
+                        (sec : HTMLElement) => {
+                            const sel = sec.getElementsByClassName("rundoc-block")[0];
+                            return sel.getAttribute("rundoc-language") === "ts" &&
+                                sel.getAttribute("rundoc-module");
+                        }).
+                    map((sec : HTMLElement) => {
+                        const summary = sec.getElementsByTagName("summary")[0];
+                        const lessMore = document.createElement("i");
+                        lessMore.className = "gt-less-more material-icons md-24 md-dark";
+                        summary.appendChild(lessMore);
+                        const sel = sec.getElementsByClassName("rundoc-block")[0] as HTMLElement;
+                        const text = sel.innerText.trim();
                         sel.textContent = "";
                         const path = sel.getAttribute("rundoc-module");
                         const uri = monaco.Uri.parse(`/${path}.ts`);
@@ -101,7 +110,7 @@ export const init =
                         const editor : Ed =
                             monaco.editor.create(sel, {
                                 model,
-                                lineNumbers: "on",
+                                lineNumbers: "off",
                                 scrollBeyondLastLine: false,
                                 minimap: {
                                     enabled: false
@@ -111,9 +120,17 @@ export const init =
                                     horizontalScrollbarSize: scrollbarSize
                                 }
                             });
-                        const toolbar = document.createElement('div');
-                        toolbar.innerHTML = `<button class='gt-run'>Run</button>`;
-                        sel.appendChild(toolbar);
+                        const toolbar = sec.getElementsByClassName('gt-module-tools')[0];
+                        const runButton = document.createElement("button");
+                        runButton.className = "gt-action-run material-icons md-24 md-dark";
+                        runButton.innerText = "play_circle_filled";
+                        runButton.setAttribute("title", "Run this module");
+                        toolbar.appendChild(runButton);
+                        const revertButton = document.createElement("button");
+                        revertButton.className = "gt-action-revert material-icons md-24 md-dark";
+                        revertButton.innerText = "restore";
+                        revertButton.setAttribute("title", "Revert this module");
+                        toolbar.appendChild(revertButton);
                         return [path, {
                             editor,
                             originalText: text,
@@ -121,18 +138,26 @@ export const init =
                             model,
                             path,
                             uri,
-                            runButton: toolbar.getElementsByClassName('gt-run')[0],
+                            runButton,
+                            revertButton,
                             imports: []
                         }];
                     }));
 
-        const resizeEditors = (mods : Modules) : void => {
-            for (const {editor, container} of objValues(mods)) {
+        const resizeEditor = ({editor, model, container} : Module) : void => {
+            window.requestAnimationFrame(() => {
+                const lh = editor.getConfiguration().lineHeight;
+                const lc = model.getLineCount();
+                const height = (lh * lc) + scrollbarSize;
+                container.style.height = `${height}px`;
                 editor.layout();
-                window.requestAnimationFrame(() => {
-                    container.style.height = `${editor.getScrollHeight()}px`;
-                    editor.layout();
-                });
+            });
+        };
+
+        const resizeEditors = (mods : Modules) : void => {
+            for (const m of objValues(mods)) {
+                m.editor.layout();
+                resizeEditor(m);
             };
         };
 
@@ -175,31 +200,41 @@ export const init =
             (path : string, mods : Modules) : Array<Module> =>
             objValues(mods).filter(m => m.imports.includes(path));
 
-        const transitivelyDependentModules =
-            (path : string, mods : Modules) : Array<Module> => {
-                const deps : Array<Module> = [];
-                const depset = new Set<string>();
-                const go = (path : string) => {
-                    const ms = dependentModules(path, mods);
-                    for (const m of ms) {
-                        if (!depset.has(m.path)) {
-                            depset.add(m.path);
-                            deps.push(m);
-                        }
-                    }
-                    for (const m of ms) {
-                        go(m.path);
-                    }
-                }
-                go(path);
-                return deps;
-            };
+        // const transitivelyDependentModules =
+        //     (path : string, mods : Modules) : Array<Module> => {
+        //         const deps : Array<Module> = [];
+        //         const depset = new Set<string>();
+        //         const go = (path : string) => {
+        //             const ms = dependentModules(path, mods);
+        //             for (const m of ms) {
+        //                 if (!depset.has(m.path)) {
+        //                     depset.add(m.path);
+        //                     deps.push(m);
+        //                 }
+        //             }
+        //             for (const m of ms) {
+        //                 go(m.path);
+        //             }
+        //         }
+        //         go(path);
+        //         return deps;
+        //     };
 
         const refreshDependentModules = (path : string, mods : Modules) =>
             requestIdleCallback(() => {
-                const deps = transitivelyDependentModules(path, mods);
-                for (const d of deps) {
-                    requestIdleCallback(() => d.model.setValue(d.model.getValue()))
+                const deps = dependentModules(path, mods);
+                for (const {editor, model} of deps) {
+                    requestIdleCallback(() => {
+                        const pos = editor.getPosition();
+                        editor.executeEdits("force-recheck", [{
+                            identifier: {major: 1, minor: 1},
+                            range: new monaco.Range(1, 1, 10000, 1),
+                            text: model.getValue(),
+                            forceMoveMarkers: true
+                        }]);
+                        editor.setSelection(new monaco.Range(0, 0, 0, 0));
+                        editor.setPosition(pos);
+                    });
                 }
             });
 
@@ -279,7 +314,7 @@ export const init =
                 }
                 else {
                     for (const m of relevant) {
-                        global.require.undef(m.path);
+                        window.require.undef(m.path);
                     }
                     try {
                         const sources = await getJs(relevant);
@@ -287,10 +322,11 @@ export const init =
                             new Function(src)();
                         }
                         const [m] = await prequire([mod.path]);
-                        const val =
+                        const ret =
                             typeof m.run === "function"
                             ? m.run()
                             : undefined;
+                        const val = ret instanceof Promise ? await ret : ret;
                         return {
                             tag: "value",
                             val
@@ -310,38 +346,50 @@ export const init =
 
         const runModuleDisplay =
             async (mod : Module, modules : Modules) : Promise<void> => {
-                const x = await runModule(mod, modules, _ => {});
-                if (x.tag === "diagnostics") {
-                    console.log(x);
-                }
-                else if (x.tag === "value") {
-                    console.log(x);
-                }
-                else if (x.tag === "runtime" || x.tag === "require") {
-                    console.log(
-                        x.val instanceof Error
-                            ? {
-                                tag: x.tag,
-                                val: x.val.message,
-                                module: (x.val as any).requireMap.name
-                            }
+                mod.runButton.classList.add("gt-run-spinner");
+                try {
+                    const x = await runModule(mod, modules, _ => {});
+                    if (x.tag === "diagnostics") {
+                        console.log(x);
+                    }
+                    else if (x.tag === "value") {
+                        console.log(x);
+                    }
+                    else if (x.tag === "runtime" || x.tag === "require") {
+                        console.log(
+                            x.val instanceof Error
+                                ? {
+                                    tag: x.tag,
+                                    val: x.val.message,
+                                    module: (x.val as any).requireMap.name
+                                }
                             : x);
+                    }
+                    else {
+                        assertNever(x);
+                    }
                 }
-                else {
-                    assertNever(x);
+                finally {
+                    mod.runButton.classList.remove("gt-run-spinner");
                 }
             };
 
+        const revertModule = (m : Module, ms : Modules) => {
+            m.model.setValue(m.originalText);
+        };
+
         const contentChangeHandler = (m : Module, ms : Modules) => {
+            resizeEditor(m);
             updateImports(m);
             refreshDependentModules(m.path, ms);
         };
 
         for (const module of objValues(modules)) {
-            const {model, originalText, runButton} = module;
+            const {model, originalText, runButton, revertButton} = module;
             model.setValue(originalText);
             model.onDidChangeContent(() => contentChangeHandler(module, modules));
             runButton.addEventListener("click", () => runModuleDisplay(module, modules));
+            revertButton.addEventListener("click", () => revertModule(module, modules));
         }
 
         window.addEventListener("resize", () => resizeEditors(modules));

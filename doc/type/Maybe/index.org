@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-07 Fri]
+#+DATE: [2017-07-08 Sat]
 
 * Motivation
 
@@ -38,7 +38,7 @@ ensures that the ~Nothing~ case is handled.
 
 * Minimal implementation
 
-#+BEGIN_SRC ts :module maybe-minimal
+#+BEGIN_SRC ts :module maybe-minimal :hide t
 export class Maybe<A> {
     static nothing<A>() : Maybe<A> {
         return new Maybe<A>(null);
