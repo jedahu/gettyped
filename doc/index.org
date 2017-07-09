@@ -1,6 +1,12 @@
 #+TITLE: Get Typed
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-06-06 Tue]
+#+DATE: [2017-07-10 Mon]
 
 
+* Topics
+  :PROPERTIES:
+  :CUSTOM_ID: gt-topics-list
+  :END:
+
+- [[./maybe-null][Maybe: null done right]]

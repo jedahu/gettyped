@@ -84,7 +84,7 @@ rec {
     phases = "buildPhase";
     buildInputs = [pandoc html-filter];
     buildPhase = ''
-      mkdir -p "$out/${path}"
+      mkdir -p "$out${path}"
       pandoc -f org -t html5 \
         -V site-root=${site-root} \
         -V main-js=${main-js} \
@@ -95,7 +95,7 @@ rec {
         --standalone \
         --template "${template}" \
         "${absPath}" \
-        | html-filter >"$out/${path}/index.html"
+        | html-filter >"$out${path}/index.html"
   '';
   };
   page-modules = absPath: pkgs.stdenv.mkDerivation {
@@ -106,38 +106,44 @@ rec {
     checkInputs = [nodejs rsync];
     unpackPhase = ''
       mkdir "$sourceRoot"
+      echo absPath ${absPath}
+      ls ${absPath}
       cp "${absPath}" "$sourceRoot/page.org"
       cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
       cp "${./tsconfig.json}" "$sourceRoot/tsconfig.json"
       cp -r "${./test}" "$sourceRoot/test"
     '';
     buildPhase = ''
+      mkdir "$out"
       extract-modules page.org "$out"
     '';
     doCheck = true;
     checkPhase = ''
-      export PATH="$PATH:${nodejs}/bin"
-      "${rsync}/bin/rsync" -aL "$out/" modules/
-      cp -r "${node-deps}" node_modules
-      NODE_PATH=.:./modules \
-        "./node_modules/.bin/ts-node" \
-        -P test \
-        test/demo.ts
+      if [[ -n $(ls -A "$out") ]]
+      then
+        export PATH="$PATH:${nodejs}/bin"
+        "${rsync}/bin/rsync" -aL "$out/" modules/
+        cp -r "${node-deps}" node_modules
+        NODE_PATH=.:./modules \
+          "./node_modules/.bin/ts-node" \
+          -P test \
+          test/demo.ts
+      fi
     '';
   };
   gen-page = {path, absPath, ...}: {
     html = page-html path absPath;
     modules = page-modules absPath;
   };
-  page = {name, path}: {
-    inherit name path;
-    absPath = ./. + ("/" + path + "/index.org");
+  page = orgPath: {
+    path = lib.removeSuffix "/index.org" ("/" + orgPath);
+    absPath = ./. + ("/doc/" + orgPath);
   };
-  pageList = map page [
-    { name = "Maybe: null done properly";
-      path = "doc/type/Maybe";
-    }
-  ];
+  page-paths = runCommand "page-paths" {src = ./doc;} ''
+    shopt -s globstar
+    (cd "$src" && ls -1 **/index.org) >"$out"
+  '';
+  pageList = map page (filter (p: p != "") (lib.splitString "\n" (readFile page-paths)));
   pages = map gen-page pageList;
   demo-outfile = pkgs.stdenv.mkDerivation rec {
     name = "demo.js";
