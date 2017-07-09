@@ -13,6 +13,11 @@ declare module "object.entries" {
     export = x;
 }
 
+declare module "vs/language/typescript/lib/typescriptServices" {
+    const x : typeof ts;
+    export = x;
+}
+
 declare interface Window {
     require : any;
     __gt : {

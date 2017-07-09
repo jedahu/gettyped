@@ -325,6 +325,39 @@ table td {
   }
 }
 
+
+/* * Icons */
+
+[data-icon]::before {
+    content: attr(data-icon);
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 1em;
+    display: inline-block;
+    vertical-align: middle;
+    width: 1em;
+    height: 1em;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+
+    * Support for all WebKit browsers. */
+    -webkit-font-smoothing: antialiased;
+
+    * Support for Safari and Chrome. */
+    text-rendering: optimizeLegibility;
+
+    /* Support for Firefox. */
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Support for IE. */
+    font-feature-settings: 'liga';
+}
+
 /* * GetTyped */
 
 summary {
@@ -354,14 +387,15 @@ details.gt-module-section[open] pre {
     margin-bottom: 0;
 }
 
-details.gt-module-section[open] > summary ~ * {
+details.gt-module-section[open] > summary + * {
     border-left: 0.4em solid #eeeeff;
+    margin-top: 0.5em;
 }
 
 details.gt-module-section > summary {
     font-size: 1em;
     font-family: monospace;
-    color: navy;
+    color: #4255bd;
     width: 100%;
     cursor: pointer;
 }
@@ -372,12 +406,49 @@ button.material-icons {
     cursor: pointer;
 }
 
-.gt-action-run {
-    color: navy;
+.gt-module-output {
+    list-style-type: none;
+    padding-left: 0;
+    margin-left: 6px;
+    font-family: sans-serif;
+    font-size: 1em;
+    color: #555555;
 }
 
-.gt-action-revert {
-    color: navy;
+.gt-action-run,
+.gt-action-revert,
+.gt-action-clear {
+    color: #7989e7;
+}
+
+.gt-module-output .gt-log-special {
+    color: #2ea22e;
+}
+
+.gt-log-entry-log > .gt-log-tag {
+    color: #51519c;
+}
+
+.gt-log-entry-log > .gt-log-item {
+    white-space: pre-wrap;
+}
+
+.gt-log-entry-result > .gt-log-tag {
+    color: #0000aa;
+}
+
+.gt-log-entry-syntax,
+.gt-log-entry-types {
+    cursor: pointer;
+}
+
+.gt-log-entry-syntax > .gt-log-tag,
+.gt-log-entry-types > .gt-log-tag {
+    color: #ed3d0c;
+}
+
+.gt-log-entry-runtime > .gt-log-tag {
+    color: #ed0c3c;
 }
 
 /* * Spinner */
