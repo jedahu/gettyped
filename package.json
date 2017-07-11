@@ -2,11 +2,14 @@
     "dependencies": {},
     "devDependencies": {
         "@types/node": "^8.0.5",
+        "eslint": "^4.2.0",
+        "eslint-plugin-compat": "^1.0.4",
         "glob-fs": "^0.1.6",
         "painless": "^0.9.5",
         "tern": "^0.21.0",
         "ts-node": "^3.1.0",
-        "typescript": "^2.4.1"
+        "typescript": "^2.4.1",
+        "typescript-eslint-parser": "^4.0.0"
     },
     "name": "gettyped",
     "version": "0.1.0",

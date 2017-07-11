@@ -1,17 +1,36 @@
 import * as painless from "painless";
 import * as globfs from "glob-fs";
 import * as fs from "fs";
+import {assert, assertp} from "gt-lib";
+
+const mockCanvasContext : CanvasRenderingContext2D = {
+    fillRect(..._ : any[]) : any {}
+} as any;
+
+const gtlib : $GT = {
+    assert,
+    assertp,
+    log: (...xs : Array<any>) => {},
+    withCanvas: <A>(
+        f : (ctx : CanvasRenderingContext2D) => A,
+        width : number = 300,
+        height : number = 150
+    ) : A =>
+        f(mockCanvasContext)
+};
+
+(global as any).$gt = gtlib;
 
 const glob = () => globfs({gitignore: false});
 
 const paths : Array<string> =
     glob().readdirSync("modules/**/*.ts");
 
-const withSilentConsole = (go : () => void) => {
+const withSilentConsole = <A>(go : () => A) : A => {
     const log = console.log;
     console.log = (..._ : any[]) => {};
     try {
-        go();
+        return go();
     }
     finally {
         console.log = log;
@@ -36,8 +55,27 @@ const expectRuntimeError = (p : string) =>
         () =>
             withSilentConsole(
                 () =>
-                    painless.assert.throws(
-                        () => require(p),
+                    painless.assert.isRejected(
+                        new Promise((res, rej) => {
+                            try {
+                                const m = require(p);
+                                if (typeof m.run === "function") {
+                                    const x = m.run();
+                                    if (x instanceof Promise) {
+                                        x.then(res);
+                                    }
+                                    else {
+                                        res();
+                                    }
+                                }
+                                else {
+                                    res();
+                                }
+                            }
+                            catch (e) {
+                                rej(e);
+                            }
+                        }),
                         /^(?!.*Unable to compile TypeScript)/)));
 
 const expectNoError = (p : string) =>

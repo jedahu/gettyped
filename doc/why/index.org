@@ -1,0 +1,245 @@
+#+TITLE: Why types?
+#+AUTHOR: Jeremy Hughes
+#+EMAIL: jedahu@gmail.com
+#+DATE: [2017-07-11 Tue]
+
+Types create guarantees. They describe properties of a program that can be
+verified without running the program.
+
+
+** Untyped pitfalls
+
+Here is an untyped implementation of a function that draws a square on a canvas
+and returns its area. By using the =any= type we have disabled Typescript's static
+checks.
+#+BEGIN_SRC ts :module square0
+export const square0 : any = (size : any, color : any) : any =>
+    $gt.withCanvas(ctx => {
+        ctx.fillStyle = color;
+        ctx.fillRect(10, 10, size, size);
+        return size * size;
+    });
+
+export const run = () => {
+    $gt.log("area: ", square0(10, "red"));
+};
+#+END_SRC
+
+# These functions are vulnerable to the following runtime failures:
+
+# #+BEGIN_SRC ts :module wrong-arity
+# import {triangle} from "triangle";
+
+# // It could be that `showTriangle` originally took one argument. Someone changed
+# // it, and now this preexisting code breaks with no warning.
+# export const run = () => showTriangle(5);
+# #+END_SRC
+
+# #+BEGIN_SRC ts :module bad-arg-value
+# import {triangle} from "triangle";
+
+# // Forgot to convert Roman to Arabic.
+# export const run = () => triangle("IV");
+# #+END_SRC
+
+# #+BEGIN_SRC ts :module mishandled-return-value
+# import {triangle} from "triangle";
+
+# // Thought `showTriangle` returned an array.
+# export const run = () => showTriangle(3, "x").map(_ => "*");
+# #+END_SRC
+
+
+# ** Untyped mitigations
+
+# We can add assertions:
+# #+BEGIN_SRC ts :module triangle1
+# import {assert} from "gt-lib";
+
+# export const isNatural : any = (n : any) : any =>
+#     n % 1 === 0 && n >= 0;
+
+# export const isChar : any = (c : any) : any =>
+#     typeof c === "string" && c.length === 1;
+
+# const assertNatural : any = (n : any) : any =>
+#     assert(isNatural(n), "natural number required");
+
+# const assertChar : any = (c : any) : any =>
+#     assert(isChar(c), "char required");
+
+# export const triangle : any = (n : any) : any => {
+#     assertNatural(n);
+#     return (n * (n + 1)) / 2;
+# };
+
+# export const showTriangle : any = (n : any, char : any) : any => {
+#     assertNatural(n);
+#     assertChar(char);
+#     let s = "";
+#     for (; n > 0; --n) {
+#         s = s + char.repeat(n) + "\n";
+#     }
+#     return s;
+# };
+
+# export const run = () => {
+#     console.log(triangle(3));
+#     console.log(showTriangle(4, "x"));
+# };
+# #+END_SRC
+
+# We can write tests:
+# #+BEGIN_SRC ts :module triangle-tests
+# import {triangle, isNatural, isChar} from "triangle1";
+
+# const testTriangle : any = (n : any) : any => {
+#     try {
+#         const x = triangle(n);
+#         return isNatural(n) && isNatural(x);
+#     }
+#     catch (e) {
+#         return !isNatural(n);
+#     }
+# };
+
+# export const run = () => {
+#     console.log(testTriangle(3));
+#     console.log(testTriangle(-4));
+#     console.log(testTriangle(5.5));
+#     console.log(testTriangle("abc"));
+# };
+# #+END_SRC
+
+# But assertions only operate at run time and tests can only protect against
+# incorrect implementation, not incorrect use, so all calling code needs to be
+# tested too.
+
+# As written, the function comes with some external static guarantees. The
+# Typescript checker ensures that =triangle=:
+# - is called with exactly one argument
+# - which is a =number=
+
+# In addition, we've asserted that the argument is a natural number and documented
+# that requirement so callers know.
+
+# Breaching the statically checked invariants will result in a "compile time"
+# error as in the next two examples:
+# #+BEGIN_SRC ts :module arity-static-error :error static
+# import {triangle} from "triangle";
+
+# export const run = () => triangle(
+#     // 3, 4 // uncomment to check with >1 args
+# );
+# #+END_SRC
+
+# #+BEGIN_SRC ts :module type-static-error :error static
+# import {triangle} from "triangle";
+
+# export const run = () => triangle("3");
+# #+END_SRC
+
+# Breaching the run time checked invariants will result in a "run time" error:
+# #+BEGIN_SRC ts :module triangle-bad-arg :error runtime
+# import {triangle} from "triangle";
+
+# export const run = () => triangle(-3);
+# #+END_SRC
+
+# Forgetting to write the run time check or getting it wrong (should have been ~n
+# >= 0~) will also result in a "run time" error:
+# #+BEGIN_SRC ts :module triangle-bad-arg-check :error runtime
+# import {triangle} from "triangle";
+
+# export const run = () => triangle(0);
+# #+END_SRC
+
+# The run time check is problematic:
+# - To be safe, all functions expecting a natural number must check their input
+#   and check it correctly.
+# - However, this does nothing to prevent callers from passing bad values.
+#   (Accident, not reading the documentation, documentation incorrect.)
+# - So to ensure good behaviour, callers either need to check the value as well or
+#   catch the error.
+
+# #+BEGIN_SRC ts :module caller-checks-too
+# import {triangle} from "triangle";
+
+# export const run = () => {
+#     const val = "3";
+#     // const val = window.prompt("Calculate the triangular number for:");
+#     const n = parseInt(val || "", 10);
+#     if (n <= 0) {
+#         console.log(`Bad triangle: ${n}`);
+#     }
+#     else {
+#         console.log(`Triangular number ${n} is ${triangle(n)}`);
+#     }
+# };
+# #+END_SRC
+
+# What we need is a new type for naturals. If we have one, bad arguments will be
+# flagged at compile time and =triangle= won't need to perform any argument
+# checking.
+
+
+# ** Turning run time errors into compile time ones
+
+# Define a natural number type. It throws if its value is invalid.
+# #+BEGIN_SRC ts :module natural-number
+# import {assert} from "gt-lib";
+
+# export class Nat {
+#     "@nominal" : "8ca72d35-25b7-4029-84cf-5deee9bf617a";
+
+#     private constructor(public readonly val : number) {}
+
+#     static is(n : number) : boolean {
+#         return n % 1 === 0 && n >= 0;
+#     }
+
+#     static mk(n : number) : Nat {
+#         assert(Nat.is(n), "unnatural");
+#         return new Nat(n);
+#     }
+# }
+
+# export const nat = Nat.mk;
+# #+END_SRC
+
+# Define =triangle= in terms of the new type. No runtime checks necessary.
+# #+BEGIN_SRC ts :module triangle2
+# import {Nat, nat} from "natural-number";
+
+# export const triangle = ({val} : Nat) : Nat =>
+#     nat((val * (val + 1)) / 2);
+
+# export const run = () => triangle(nat(3));
+# #+END_SRC
+
+# Invalid values are now incorrect types.
+# #+BEGIN_SRC ts :module triangle2-bad-arg :error static
+# import {triangle} from "triangle2";
+
+# export const run = () => triangle(-3);
+# #+END_SRC
+
+# We've pushed the necessary runtime checks outside the =triangle= function. There
+# is now no way to pass an invalid value to =triangle=.
+
+# #+BEGIN_SRC ts :module check-once
+# import {triangle} from "triangle2";
+# import {Nat, nat} from "natural-number";
+
+# export const run = () => {
+#     const val = "3";
+#     // const val = window.prompt("Calculate the triangular number for:");
+#     const n = parseInt(val || "", 10);
+#     if (!Nat.is(n)) {
+#         console.log(`Bad triangle: ${n}`);
+#     }
+#     else {
+#         console.log(`Triangular number ${n} is ${triangle(nat(n))}`);
+#     }
+# };
+# #+END_SRC

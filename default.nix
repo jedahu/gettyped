@@ -112,6 +112,7 @@ rec {
       cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
       cp "${./tsconfig.json}" "$sourceRoot/tsconfig.json"
       cp -r "${./test}" "$sourceRoot/test"
+      cp -r "${./ts}" "$sourceRoot/ts"
     '';
     buildPhase = ''
       mkdir "$out"
@@ -124,7 +125,7 @@ rec {
         export PATH="$PATH:${nodejs}/bin"
         "${rsync}/bin/rsync" -aL "$out/" modules/
         cp -r "${node-deps}" node_modules
-        NODE_PATH=.:./modules \
+        NODE_PATH=.:./modules:./ts \
           "./node_modules/.bin/ts-node" \
           -P test \
           test/demo.ts
@@ -180,6 +181,14 @@ rec {
       }
     '';
   };
+  libs-d-ts = writeTextFile {
+    name = "libs.d.ts";
+    text = lib.concatMapStrings readFile [
+      "${node-deps}/typescript/lib/lib.es2016.full.d.ts"
+      "${node-deps}/typescript/lib/lib.es2017.object.d.ts"
+      ./ts/d/lib.gt.d.ts
+    ];
+  };
   site = pkgs.stdenv.mkDerivation rec {
     name = "gettyped-site";
     src = ./.;
@@ -191,7 +200,7 @@ rec {
       mkdir -p "$out/modules"
       ln -s "${./static}" "$out/static"
       ln -s "${./css/main.css}" "$out/main.css"
-      ln -s "${node-deps}/typescript/lib/lib.es6.d.ts" "$out/lib.es6.d.ts"
+      ln -s "${libs-d-ts}" "$out/libs.d.ts"
       ln -s "${compile-js}/${main-js}" "$out/${main-js}"
       for p in ${concatStringsSep " " htmls}
       do

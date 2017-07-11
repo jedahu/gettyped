@@ -2,12 +2,13 @@
     "extends": "../tsconfig.json",
     "include": [
         "./**/*.ts",
-        "../modules/**/*.ts"
+        "../modules/**/*.ts",
+        "../ts/**/*.ts"
     ],
     "compilerOptions": {
         "baseUrl": "../",
         "paths": {
-            "*": ["./modules/*"]
+            "*": ["./modules/*", "./ts/*"]
         }
     }
 }

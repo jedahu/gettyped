@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-08 Sat]
+#+DATE: [2017-07-11 Tue]
 
 * Motivation
 
@@ -90,7 +90,7 @@ const line = (n : t.Name|null) : string =>
 
 const a = line(new t.Name("Isaac", "Newton"));
 const b = line(null);
-console.log(a + b);
+$gt.log(a + b);
 #+END_SRC
 
 exhibits a lack of type safety in two ways:
@@ -106,7 +106,7 @@ const line = (n : t.Name|null) : string =>
 
 const a = line(new t.Name("Bertram", "Russell"));
 const b = line(null);
-console.log(a + b);
+$gt.log(a + b);
 #+END_SRC
 
 *Boolean blindness.* The compiler doesn’t stop accidental dereferencing, as in
@@ -119,7 +119,7 @@ const line = (n : t.Name|null) : string =>
 
 const a = line(new t.Name("Kurt", "Godel"));
 const b = line(null);
-console.log(a + b);
+$gt.log(a + b);
 #+END_SRC
 
 Boolean blindness is [[bb][well described by Robert Harper]]. Here’s the money quote:
@@ -150,7 +150,7 @@ const line = (n : m.Maybe<t.Name>) : string =>
 
 const a = line(m.Maybe.just(new t.Name("Q", "Cantor")));
 const b = line(m.Maybe.nothing<t.Name>());
-console.log(a + b);
+$gt.log(a + b);
 #+END_SRC
 
 *Assumption.* The programmer cannot get at the value of a ~Maybe~ without going
@@ -164,7 +164,7 @@ const line = (n : m.Maybe<t.Name>) : string =>
 
 const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
 const b = line(m.Maybe.nothing<t.Name>());
-console.log(a + b);
+$gt.log(a + b);
 #+END_SRC
 
 *Boolean blindness.* ~Maybe.fold~ provides a value only to the ~just~ case, so
@@ -178,5 +178,5 @@ const line = (n : m.Maybe<t.Name>) : string =>
 
 const a = line(m.Maybe.just(new t.Name("Lewis", "Caroll")));
 const b = line(m.Maybe.nothing<t.Name>());
-console.log(a + b);
+$gt.log(a + b);
 #+END_SRC

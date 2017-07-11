@@ -20,6 +20,7 @@ declare module "vs/language/typescript/lib/typescriptServices" {
 
 declare interface Window {
     require : any;
+    define : any;
     __gt : {
         tsconfig : any;
         siteRoot : string;

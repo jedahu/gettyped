@@ -1,42 +1,13 @@
 import {getTsOpts} from "./tsconfig";
-import {assertNever, objMap, objValues, objEntries, arrayFlatMap} from "./util";
+import {objMap, objValues, objEntries, arrayFlatMap} from "./util";
 import {manageFocusOutlines} from "./focus-outline";
+import {withGtLib} from "./gt-lib";
 import monaco from "./monaco";
 import ts from "./ts-services";
+import {Diag, RunRet, Editor, Module, Modules} from "./types";
+import {clearOutput, writeResult} from "./output";
 
 declare function requestIdleCallback(f : () => void) : void;
-
-type Ed = monaco.editor.IStandaloneCodeEditor;
-type Mod = monaco.editor.IModel;
-
-type Module = {
-    editor : Ed;
-    model : Mod;
-    path : string;
-    uri : monaco.Uri;
-    imports : Array<string>;
-    originalText : string;
-    container : HTMLElement;
-    runButton : HTMLElement;
-    revertButton : HTMLElement;
-    clearButton : HTMLElement;
-    output : HTMLElement;
-};
-
-type Modules = {[path : string] : Module};
-
-const esc = (...s : Array<string>) : string => {
-    const div = document.createElement("div");
-    div.textContent = s.join("");
-    return div.innerHTML;
-};
-
-const stringify = (x : any) : string =>
-    typeof x === "string"
-    ? esc(x)
-    : typeof x === "undefined"
-    ? "<span class='gt-log-special'>undefined</span>"
-    : esc(JSON.stringify(x, null, 2));
 
 const resetRequireError = () => {
     window.require.onError = (e : any) => { throw e; };
@@ -64,9 +35,16 @@ const prequire = async (paths : Array<string>) : Promise<any> =>
 const scrollbarSize = window.__gt.scrollbarSize;
 const siteRoot = window.__gt.siteRoot;
 
-const lib_es6_d_ts =
-    window.fetch(`${siteRoot}/lib.es6.d.ts`).
-    then(r => r.text());
+const fetchText = (url : string) : Promise<string> =>
+    window.fetch(url).then(r => r.text());
+
+const libs_d_ts = () =>
+    [
+        "libs.d.ts"
+    ].map(async name => {
+        const content = await fetchText(siteRoot + "/" + name);
+        return {name, content};
+    });
 
 const getWorker = () =>
     monaco.languages.typescript.getTypeScriptWorker();
@@ -93,19 +71,21 @@ const resizeEditors = (mods : Modules) : void => {
     };
 };
 
-const updateImports = (mod : Module) =>
+const importedPaths =
+    (mod : Module) : Array<string> =>
+    ts.preProcessFile(mod.model.getValue(), true, false).
+    importedFiles.
+    map(f => f.fileName).
+    filter(p => p !== "gt-lib");
+
+const updateImports = (mod : Module) : void =>
     requestIdleCallback(() => {
-        mod.imports =
-            ts.preProcessFile(mod.model.getValue(), true, false).
-            importedFiles.
-            map(f => f.fileName);
+        mod.imports = importedPaths(mod);
     });
 
 const importedModules =
     (mod : Module, modules : Modules) : Array<Module> =>
-    ts.preProcessFile(mod.model.getValue(), true, false).
-    importedFiles.
-    map(f => modules[f.fileName]);
+    importedPaths(mod).map(p => modules[p]);
 
 const transitivelyImportedModules =
     (mod : Module, modules : Modules) : Array<Module> => {
@@ -170,9 +150,6 @@ const refreshDependentModules = (path : string, mods : Modules) =>
         }
     });
 
-type DiagType = "syntax" | "types";
-type Diag = ts.Diagnostic & {diagType : DiagType};
-
 const getDiagnostics = async (uri : monaco.Uri) : Promise<Array<Diag>> => {
     const client = await getClient(uri);
     const syntactic = await client.getSyntacticDiagnostics(uri.toString());
@@ -224,19 +201,6 @@ const diagnosticMessage = (diag : ts.Diagnostic) : string => {
     };
     return s;
 };
-
-type DiagInfo = {
-    module : string;
-    message : string;
-    diagType : DiagType;
-    position? : {line : number; column : number;}
-};
-
-type RunRet =
-    {tag : "diagnostics"; val : Array<DiagInfo>}
-    | {tag : "value"; val : any}
-    | {tag : "runtime"; val : any}
-    | {tag : "require"; val : any};
 
 const runModule =
     async (mod : Module, modules : Modules) : Promise<RunRet> => {
@@ -299,140 +263,14 @@ const runModule =
         }
     };
 
-const withLogCapture =
-    async <A>(
-        log : (...xs : Array<any>) => void,
-        f : () => Promise<A>
-    ) : Promise<A> => {
-        const clog = console.log;
-        console.log = log;
-        try {
-            return await f();
-        }
-        finally {
-            console.log = clog;
-        }
-    };
-
-const mkElement = (...html : Array<string>) : HTMLElement => {
-    const div = document.createElement("div");
-    div.innerHTML = html.join("");
-    return div.firstElementChild as HTMLElement;
-};
-
-type LogTag = "result" | "log" | "syntax" | "types" | "runtime";
-
-const logTagInfo = (tag : LogTag) : string =>
-    ({
-        result: "result",
-        log: "info",
-        syntax: "syntax error",
-        types: "type error",
-        runtime: "runtime error"
-    })[tag];
-
-const writeToOutput =
-    (m : Module) =>
-    (tag : LogTag) =>
-    (html : Array<string>, data? : {[k : string] : string}) => {
-        const entry =
-            mkElement(
-                `<li class='gt-log-entry gt-log-entry-${tag}'>`,
-                "<span class='gt-log-tag'>",
-                logTagInfo(tag),
-                ":</span> ",
-                html.join(""),
-                // esc(xs.map(x => x.toString()).join(" ")),
-                "</li>"
-            );
-        for (const [k, v] of objEntries(data || {})) {
-            entry.dataset[k] = v;
-        };
-        m.output.appendChild(entry);
-    };
-
-const writeLog = (m : Module) => (...xs : Array<any>) =>
-    writeToOutput(m)("log")(
-        xs.map(
-            x => "<span class='gt-log-item'>" +
-                stringify(x) +
-                "</span> "
-        ));
-
-const writeDiag = (m : Module) => (diag : DiagInfo) => {
-    const pos = diag.position;
-    writeToOutput(m)(diag.diagType)(
-        [
-            "<span class='gt-log-diag-module'>",
-            esc(diag.module + ".ts"),
-            "</span>: ",
-            "<span class='gt-log-diag-message'>",
-            esc(diag.message),
-            "</span>"
-        ],
-        {
-            line: pos === undefined ? "" : pos.line.toString(),
-            column: pos === undefined ? "" :  pos.column.toString()
-        });
-};
-
-const writeRuntime = (m : Module) => (err : any) => {
-    const requireMap : any = (err as any).requireMap;
-    if (err instanceof Error && requireMap) {
-        writeToOutput(m)("runtime")([
-            "<span class='gt-log-runtime-message'>",
-            err.message,
-            "</span>"
-        ]);
-    }
-    else if (err instanceof Error) {
-        writeToOutput(m)("runtime")([
-            "<span class='gt-log-runtime-error-name'>",
-            err.name,
-            "</span>: ",
-            "<span class='gt-log-runtime-message'>",
-            err.message,
-            "</span>"
-        ]);
-    }
-    else {
-        writeToOutput(m)("runtime")([stringify(err)]);
-    }
-};
-
-const writeResult = (m : Module) => (x : any) =>
-    writeToOutput(m)("result")([
-        "<span class='gt-log-result'>",
-        stringify(x),
-        "</span>"
-    ]);
-
-const clearOutput = (m : Module) => {
-    m.output.innerHTML = "";
-};
-
 const runModuleDisplay =
     async (mod : Module, modules : Modules) : Promise<void> => {
         mod.runButton.classList.add("gt-run-spinner");
         clearOutput(mod);
         try {
-            const x = await withLogCapture(
-                writeLog(mod),
-                () => runModule(mod, modules));
-            if (x.tag === "diagnostics") {
-                for (const diag of x.val) {
-                    writeDiag(mod)(diag)
-                }
-            }
-            else if (x.tag === "value") {
-                writeResult(mod)(x.val);
-            }
-            else if (x.tag === "runtime" || x.tag === "require") {
-                writeRuntime(mod)(x.val);
-            }
-            else {
-                assertNever(x);
-            }
+            writeResult(
+                mod,
+                await withGtLib(mod, () => runModule(mod, modules)));
         }
         finally {
             mod.runButton.classList.remove("gt-run-spinner");
@@ -477,7 +315,7 @@ export const init =
             baseUrl: "/",
             typeRoots: [],
             allowNonTsExtensions: false,
-            lib: ["es6", "dom"],
+            // lib: ["es2016", "es2016.array.include", "dom", "dom.iterable"],
             noImplicitAny: true,
             module: mts.ModuleKind.AMD,
             jsx: undefined as any,
@@ -487,8 +325,12 @@ export const init =
             noSemanticValidation: false,
             noSyntaxValidation: false
         });
-        lib_es6_d_ts.then(
-            dts => mts.typescriptDefaults.addExtraLib(dts, "lib.es6.d.ts"));
+
+        for (const p of libs_d_ts()) {
+            p.then(({name, content}) => {
+                mts.typescriptDefaults.addExtraLib(content, name);
+            });
+        }
 
         const sections = document.getElementsByClassName("gt-module-section");
         const modules : Modules =
@@ -511,7 +353,7 @@ export const init =
                         const path = sel.getAttribute("rundoc-module");
                         const uri = monaco.Uri.parse(`/${path}.ts`);
                         const model = monaco.editor.createModel("", "typescript", uri);
-                        const editor : Ed =
+                        const editor : Editor =
                             monaco.editor.create(sel, {
                                 model,
                                 lineNumbers: "off",

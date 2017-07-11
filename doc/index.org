@@ -9,4 +9,6 @@
   :CUSTOM_ID: gt-topics-list
   :END:
 
+- [[./why][Why types]]
+- Products and sums
 - [[./maybe-null][Maybe: null done right]]
