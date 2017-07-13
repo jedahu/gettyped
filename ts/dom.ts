@@ -12,10 +12,13 @@ type Handlers = {
     [K in keyof HTMLElementEventMap]?: (this : HTMLElement, evt : HTMLElementEventMap[K]) => void;
 };
 
+export const text = (s : string) : Text =>
+    document.createTextNode(s);
+
 export const html = (
     name : string,
     attrs : Attrs,
-    children : Array<string | Node>,
+    children? : Array<string | Node>,
     opts? : {
         data?: {[k : string] : any},
         handlers?: Handlers

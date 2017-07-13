@@ -1,5 +1,5 @@
 import {DiagInfo, Module, Modules, RunRet} from "./types";
-import {html as h} from "./dom";
+import {html as h, text as t} from "./dom";
 import {assertNever} from "./util";
 import {mapStackTrace} from "./trace";
 
@@ -18,7 +18,7 @@ const stringify = (x : any) : Node =>
         : ""
         ) + JSON.stringify(x, null, 2));
 
-type LogTag = "result" | "log" | "syntax" | "types" | "runtime";
+type LogTag = "result" | "log" | "syntax" | "types" | "runtime" | "note";
 
 const logTagInfo = (tag : LogTag) : string =>
     ({
@@ -26,7 +26,8 @@ const logTagInfo = (tag : LogTag) : string =>
         log: "info",
         syntax: "syntax error",
         types: "semantic error",
-        runtime: "runtime error"
+        runtime: "runtime error",
+        note: "!!"
     })[tag];
 
 const writeToOutput =
@@ -51,26 +52,24 @@ export const writeLog = (m : Module) => (...xs : Array<any>) =>
             x => h("span", {class: "gt-log-item"}, [stringify(x)])));
 
 export const writeDiag = (m : Module) => (diag : DiagInfo) => {
-    const pos = diag.position;
-    writeToOutput(m)(diag.diagType)(
-        [
-            h("span",
-              {class: "gt-log-diag-module gt-log-goto"},
-              [`${diag.module}.ts`]),
-            document.createTextNode(":"),
-            h("span",
+    const {line, column} =
+        diag.position || {line: undefined, column: undefined};
+    writeToOutput(m)(diag.diagType)([
+        h("span",
+          {class: "gt-log-goto"},
+          [ h("span",
               {class: "gt-log-diag-message"},
-              [diag.message])
-        ],
-        {
-            path: diag.module,
-            line: pos === undefined ? "" : pos.line.toString(),
-            column: pos === undefined ? "" :  pos.column.toString()
-        });
+              [diag.message]),
+            t(" "),
+            h("span",
+              {class: "gt-log-diag-module"},
+              [`(${diag.module}.ts:${line}:${column})`]),
+          ],
+          {data: {path: diag.module, line, column}})
+    ]);
 };
 
 export const writeRuntime = (m : Module, ms : Modules) => (err : any) => {
-    // const requireMap : any = (err as any).requireMap;
     if (err instanceof Error && err.stack) {
         writeToOutput(m)("runtime")([
             h("span",
@@ -83,6 +82,7 @@ export const writeRuntime = (m : Module, ms : Modules) => (err : any) => {
             h("span",
               {class: "gt-log-trace"},
               [ stringify(err),
+                "\n",
                 h("span",
                   {class: "gt-log-trace-note"},
                   ["Note: use Chrome or Firefox to enable clickable source mapped traces."])
@@ -94,6 +94,7 @@ export const writeRuntime = (m : Module, ms : Modules) => (err : any) => {
             h("span",
               {class: "gt-log-trace"},
               [ stringify(err),
+                "\n",
                 h("span",
                   {class: "gt-log-trace-note"},
                   ["Note: throw an instance of Error to enable clickable source mapped traces."])
@@ -107,6 +108,11 @@ export const writeRet = (m : Module) => (x : any) =>
         h("span", {class: "gt-log-result"}, [stringify(x)])
     ]);
 
+export const writeNote = (m : Module) => (s : string) =>
+    writeToOutput(m)("note")([
+        h("span", {class: "gt-log-note"}, [s])
+    ]);
+
 export const writeCanvas =
     (m : Module) => (w : number, h : number) : CanvasRenderingContext2D => {
         const canvas = document.createElement("canvas");
@@ -116,17 +122,24 @@ export const writeCanvas =
         return canvas.getContext("2d") as CanvasRenderingContext2D;
     };
 
-export const writeResult = (m : Module, ms : Modules, x : RunRet) => {
+export const writeResult = async (m : Module, ms : Modules, x : RunRet) => {
     if (x.tag === "diagnostics") {
+        writeNote(m)("Compile failed.");
         for (const diag of x.val) {
             writeDiag(m)(diag)
         }
     }
-    else if (x.tag === "value") {
-        writeRet(m)(x.val);
-    }
-    else if (x.tag === "runtime" || x.tag === "require") {
-        writeRuntime(m, ms)(x.val);
+    else if (x.tag === "run") {
+        const [tag, val] = await x.val;
+        if (tag === "runtime") {
+            writeRuntime(m, ms)(val);
+        }
+        else if (tag === "value") {
+            writeRet(m)(val);
+        }
+        else {
+            assertNever(tag);
+        }
     }
     else {
         assertNever(x);

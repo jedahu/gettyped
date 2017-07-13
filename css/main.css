@@ -438,12 +438,17 @@ button.material-icons {
 }
 
 .gt-log-entry-syntax > .gt-log-tag,
-.gt-log-entry-types > .gt-log-tag {
+.gt-log-entry-types > .gt-log-tag,
+.gt-log-entry-note > .gt-log-tag {
     color: #ed3d0c;
 }
 
 .gt-log-entry-runtime > .gt-log-tag {
     color: #ed0c3c;
+}
+
+.gt-log-trace {
+    white-space: pre-wrap;
 }
 
 .gt-trace-line {

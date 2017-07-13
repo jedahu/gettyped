@@ -6,7 +6,7 @@ import monaco from "./monaco";
 import ts from "./ts-services";
 import {Diag, RunRet, Editor, Module, Modules} from "./types";
 import {clearOutput, writeResult} from "./output";
-import {data} from "./dom";
+import {data, html as h} from "./dom";
 
 declare function requestIdleCallback(f : () => void) : void;
 
@@ -234,35 +234,34 @@ const runModule =
             }
         }
         else {
-            for (const m of relevant) {
-                window.require.undef(m.path);
-            }
-            try {
-                await updateJs(relevant);
-                for (const m of relevant) {
-                    // new Function(m.js)();
-                    eval(m.js);
-                }
-                const [m] = await prequire([mod.path]);
-                const ret =
-                    typeof m.run === "function"
-                    ? m.run()
-                    : undefined;
-                const val = ret instanceof Promise ? await ret : ret;
-                return {
-                    tag: "value",
-                    val
-                };
-            }
-            catch (e) {
-                return {
-                    tag: "require",
-                    val: e
-                };
-            }
-            finally {
-                resetRequireError();
-            }
+            return {
+                tag: "run",
+                val: withGtLib(mod, async () => {
+                    for (const m of relevant) {
+                        window.require.undef(m.path);
+                    }
+                    try {
+                        await updateJs(relevant);
+                        for (const m of relevant) {
+                            // new Function(m.js)();
+                            eval(m.js);
+                        }
+                        const [m] = await prequire([mod.path]);
+                        const ret =
+                            typeof m.run === "function"
+                            ? m.run()
+                            : undefined;
+                        const val = ret instanceof Promise ? await ret : ret;
+                        return ["value", val] as ["value", any];
+                    }
+                    catch (e) {
+                        return ["runtime", e] as ["runtime", any];
+                    }
+                    finally {
+                        resetRequireError();
+                    }
+                })
+            };
         }
     };
 
@@ -271,10 +270,10 @@ const runModuleDisplay =
         mod.runButton.classList.add("gt-run-spinner");
         clearOutput(mod);
         try {
-            writeResult(
+            await writeResult(
                 mod,
                 modules,
-                await withGtLib(mod, () => runModule(mod, modules)));
+                await runModule(mod, modules));
         }
         finally {
             mod.runButton.classList.remove("gt-run-spinner");
@@ -350,8 +349,9 @@ export const init =
                         }).
                     map((sec : HTMLElement) => {
                         const summary = sec.getElementsByTagName("summary")[0];
-                        const lessMore = document.createElement("i");
-                        lessMore.className = "gt-less-more material-icons md-24 md-dark";
+                        const lessMore =
+                            h("i",
+                              {class: "gt-less-more material-icons md-24 md-dark"});
                         summary.appendChild(lessMore);
                         const sel = sec.getElementsByClassName("rundoc-block")[0] as HTMLElement;
                         const text = sel.innerText.trim();
@@ -373,20 +373,26 @@ export const init =
                                 }
                             });
                         const toolbar = sec.getElementsByClassName('gt-module-tools')[0];
-                        const runButton = document.createElement("button");
-                        runButton.className = "gt-action-run material-icons md-24 md-dark";
-                        runButton.textContent = "play_circle_filled";
-                        runButton.setAttribute("title", "Run");
+                        const runButton =
+                            h("button",
+                              { class: "gt-action-run material-icons md-24 md-dark",
+                                title: "Run"
+                              },
+                              ["play_circle_filled"]);
                         toolbar.appendChild(runButton);
-                        const revertButton = document.createElement("button");
-                        revertButton.className = "gt-action-revert material-icons md-24 md-dark";
-                        revertButton.textContent = "restore";
-                        revertButton.setAttribute("title", "Revert code");
+                        const revertButton =
+                            h("button",
+                              { class: "gt-action-revert material-icons md-24 md-dark",
+                                title: "Revert code"
+                              },
+                              ["restore"]);
                         toolbar.appendChild(revertButton);
-                        const clearButton = document.createElement("button");
-                        clearButton.className = "gt-action-clear material-icons md-24 md-dark";
-                        clearButton.textContent = "clear";
-                        clearButton.setAttribute("title", "Clear output");
+                        const clearButton =
+                            h("button",
+                              { class: "gt-action-clear material-icons md-24 md-dark",
+                                title: "Clear output"
+                              },
+                              ["clear"]);
                         toolbar.appendChild(clearButton);
                         const output = sec.getElementsByClassName("gt-module-output")[0];
                         return [path, {

@@ -30,8 +30,6 @@ export type DiagInfo = {
 
 export type RunRet =
     {tag : "diagnostics"; val : Array<DiagInfo>}
-    | {tag : "value"; val : any}
-    | {tag : "runtime"; val : any}
-    | {tag : "require"; val : any};
+    | {tag : "run"; val : Promise<["value"|"runtime", any]>};
 
 export type ObjMap<A> = {[k : string] : A};
