@@ -1,7 +1,7 @@
 #+TITLE: Why types?
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-11 Tue]
+#+DATE: [2017-07-14 Fri]
 
 Types create guarantees. They describe properties of a program that can be
 verified without running the program.
@@ -14,7 +14,7 @@ and returns its area. By using the =any= type we have disabled Typescript's stat
 checks.
 #+BEGIN_SRC ts :module square0
 export const square0 : any = (size : any, color : any) : any =>
-    $gt.withCanvas(ctx => {
+    $gt.withCanvas(size + 15, ctx => {
         ctx.fillStyle = color;
         ctx.fillRect(10, 10, size, size);
         return size * size;

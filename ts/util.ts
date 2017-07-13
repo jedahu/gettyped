@@ -24,3 +24,6 @@ export const arrayFlatMap = <A, B>(xs : Array<A>, f : (a:A) => Array<B>) : Array
 export const assertNever = (a : never) : never => {
     throw new Error(`Expected never, got ${a}`);
 };
+
+export const unTs = (path : string) : string =>
+    path.endsWith(".ts") ? path.slice(0, path.length - 3) : path;

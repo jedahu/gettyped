@@ -1,8 +1,8 @@
-type TS = typeof ts;
+import ts from "./ts-services";
 
 const jsonOpts : any = window.__gt.tsconfig;
 
-export const getTsOpts = (ts : TS) => ts.parseJsonConfigFileContent(
+export const getTsOpts = () => ts.parseJsonConfigFileContent(
     jsonOpts,
     {
         useCaseSensitiveFileNames: true,

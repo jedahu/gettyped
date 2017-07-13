@@ -11,19 +11,23 @@ export const assertp =
     async (p : Promise<boolean>, msg? : string) : Promise<void> =>
     assert(await p, msg);
 
-const mkWithCanvas =
+const mkCanvas =
     <A>(m : Module) => (
-        f : (ctx : CanvasRenderingContext2D) => A,
-        width : number = 300,
-        height : number = 150
-    ) : A =>
-    f(writeCanvas(m)(width, height));
+        size : number | [number, number],
+        f : (ctx : CanvasRenderingContext2D) => A
+    ) : A => {
+        const [width, height] =
+            typeof size === "number"
+            ? [size, size]
+            : size;
+        return f(writeCanvas(m)(width, height));
+    }
 
 export const mk$GT = (m : Module) : $GT => ({
     assert,
     assertp,
     log: writeLog(m),
-    withCanvas: mkWithCanvas(m)
+    canvas: mkCanvas(m)
 });
 
 export const withGtLib =

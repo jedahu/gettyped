@@ -6,6 +6,7 @@ import monaco from "./monaco";
 import ts from "./ts-services";
 import {Diag, RunRet, Editor, Module, Modules} from "./types";
 import {clearOutput, writeResult} from "./output";
+import {data} from "./dom";
 
 declare function requestIdleCallback(f : () => void) : void;
 
@@ -176,17 +177,18 @@ const getDiagnosticsMap =
         return dmap;
     };
 
-const getJs =
-    (modules : Array<Module>) : Promise<Array<string>> =>
+const updateJs =
+    (modules : Array<Module>) : Promise<void> =>
     Promise.all(
-        modules.map(async ({uri, path}) => {
-            const client = await getClient(uri);
-            const emitted = await client.getEmitOutput(uri.toString());
-            return emitted.
+        modules.map(async m => {
+            const client = await getClient(m.uri);
+            const emitted = await client.getEmitOutput(m.uri.toString());
+            m.js = emitted.
                 outputFiles[0].
                 text.
-                replace(/^define\(/, `define('${path}',`);
-        }));
+                replace(/^define\(/, `define('${m.path}',`) +
+                `\n//# sourceURL=${m.path}.ts`;
+        })).then(_ => {});
 
 const diagnosticMessage = (diag : ts.Diagnostic) : string => {
     const msg = diag.messageText;
@@ -236,9 +238,10 @@ const runModule =
                 window.require.undef(m.path);
             }
             try {
-                const sources = await getJs(relevant);
-                for (const src of sources) {
-                    new Function(src)();
+                await updateJs(relevant);
+                for (const m of relevant) {
+                    // new Function(m.js)();
+                    eval(m.js);
                 }
                 const [m] = await prequire([mod.path]);
                 const ret =
@@ -270,6 +273,7 @@ const runModuleDisplay =
         try {
             writeResult(
                 mod,
+                modules,
                 await withGtLib(mod, () => runModule(mod, modules)));
         }
         finally {
@@ -288,14 +292,14 @@ const contentChangeHandler = (m : Module, ms : Modules) => {
     refreshDependentModules(m.path, ms);
 };
 
-const handleOutputClick = (m : Module, ms : Modules) => (e : MouseEvent) => {
+const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
     const elem = e.target;
     if (elem instanceof Element) {
-        const entry = elem.closest(".gt-log-entry-syntax, .gt-log-entry-types");
+        const entry = elem.closest(".gt-log-goto");
         if (entry instanceof HTMLElement) {
-            const line = parseInt(entry.dataset.line || "", 10);
-            const column = parseInt(entry.dataset.column || "", 10);
+            const {path, line, column} = data(entry);
             if (isFinite(line) && isFinite(column)) {
+                const m = ms[path];
                 m.editor.setPosition({lineNumber: line, column});
                 m.editor.focus();
             }
@@ -306,7 +310,7 @@ const handleOutputClick = (m : Module, ms : Modules) => (e : MouseEvent) => {
 export const init =
     () => {
         manageFocusOutlines(document, "visible-focus-outline");
-        const opts = getTsOpts(ts);
+        const opts = getTsOpts();
         const m = monaco;
         const mts = m.languages.typescript;
         mts.typescriptDefaults.setCompilerOptions({
@@ -315,6 +319,8 @@ export const init =
             baseUrl: "/",
             typeRoots: [],
             allowNonTsExtensions: false,
+            inlineSourceMap: true,
+            inlineSources: true,
             // lib: ["es2016", "es2016.array.include", "dom", "dom.iterable"],
             noImplicitAny: true,
             module: mts.ModuleKind.AMD,
@@ -394,7 +400,8 @@ export const init =
                             revertButton,
                             clearButton,
                             output,
-                            imports: []
+                            imports: [],
+                            js: ""
                         }];
                     }));
 
@@ -403,7 +410,7 @@ export const init =
             m.model.onDidChangeContent(() => contentChangeHandler(m, modules));
             m.runButton.addEventListener("click", () => runModuleDisplay(m, modules));
             m.revertButton.addEventListener("click", () => revertModule(m, modules));
-            m.output.addEventListener("click", handleOutputClick(m, modules));
+            m.output.addEventListener("click", handleOutputClick(modules));
             m.clearButton.addEventListener("click", () => clearOutput(m));
         }
 

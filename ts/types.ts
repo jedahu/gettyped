@@ -13,6 +13,7 @@ export type Module = {
     revertButton : HTMLElement;
     clearButton : HTMLElement;
     output : HTMLElement;
+    js : string;
 };
 
 export type Modules = {[path : string] : Module};
@@ -33,3 +34,4 @@ export type RunRet =
     | {tag : "runtime"; val : any}
     | {tag : "require"; val : any};
 
+export type ObjMap<A> = {[k : string] : A};

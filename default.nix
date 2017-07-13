@@ -46,14 +46,15 @@ rec {
   };
   compile-js = pkgs.stdenv.mkDerivation rec {
     name = "compile-js";
-    srcs = [./ts ./tsconfig-base.json];
     buildInputs = [nodejs];
     phases = "unpackPhase buildPhase";
     sourceRoot = "srcroot";
     unpackPhase = ''
+      export NODE_PATH="$sourceRoot/node_modules"
       mkdir "$sourceRoot"
-      ln -s "${./ts}" "$sourceRoot/ts"
-      ln -s "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
+      cp -r "${./ts}" "$sourceRoot/ts"
+      cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
+      cp "${./webpack.config.ts}" "$sourceRoot/webpack.config.ts"
       cp -r "${node-deps}" "$sourceRoot/node_modules"
     '';
     injected-js = writeTextFile {
@@ -71,9 +72,11 @@ rec {
     buildPhase = ''
       mkdir "$out"
       outjs="$out/${main-js}"
-      "${node-deps}/.bin/tsc" --project "./ts/tsconfig.json"
+      export NODE_PATH=./node_modules
+      "${node-deps}/.bin/webpack" --config ./webpack.config.ts
+      # "${node-deps}/.bin/tsc" --project "./ts/tsconfig.json"
       cat "${injected-js}" \
-        "built.js" \
+        "main.js" \
         >"$outjs"
     '';
   };
@@ -184,6 +187,7 @@ rec {
   libs-d-ts = writeTextFile {
     name = "libs.d.ts";
     text = lib.concatMapStrings readFile [
+      "${node-deps}/typescript/lib/lib.es6.d.ts"
       "${node-deps}/typescript/lib/lib.es2016.full.d.ts"
       "${node-deps}/typescript/lib/lib.es2017.object.d.ts"
       ./ts/d/lib.gt.d.ts
@@ -199,6 +203,7 @@ rec {
     buildPhase = ''
       mkdir -p "$out/modules"
       ln -s "${./static}" "$out/static"
+      ln -s "${node-deps}/monaco-editor/min/vs" "$out/vs"
       ln -s "${./css/main.css}" "$out/main.css"
       ln -s "${libs-d-ts}" "$out/libs.d.ts"
       ln -s "${compile-js}/${main-js}" "$out/${main-js}"

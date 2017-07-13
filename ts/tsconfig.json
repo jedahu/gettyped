@@ -12,5 +12,10 @@
         "module": "amd",
         "outFile": "../built.js"
     },
-    "include": ["./d/*.d.ts", "./*.ts"]
+    "include": [
+        "./d/*.d.ts",
+        "./*.ts",
+        "../node_modules/source-map/*.js"
+    ],
+    "exclude": []
 }

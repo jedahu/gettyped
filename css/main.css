@@ -437,11 +437,6 @@ button.material-icons {
     color: #0000aa;
 }
 
-.gt-log-entry-syntax,
-.gt-log-entry-types {
-    cursor: pointer;
-}
-
 .gt-log-entry-syntax > .gt-log-tag,
 .gt-log-entry-types > .gt-log-tag {
     color: #ed3d0c;
@@ -449,6 +444,18 @@ button.material-icons {
 
 .gt-log-entry-runtime > .gt-log-tag {
     color: #ed0c3c;
+}
+
+.gt-trace-line {
+    white-space: pre-wrap;
+}
+
+.gt-log-goto {
+    cursor: pointer;
+}
+
+canvas {
+    box-shadow: 0px 1px 5px 0px black;
 }
 
 /* * Spinner */

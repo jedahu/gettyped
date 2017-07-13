@@ -21,6 +21,8 @@ declare module "vs/language/typescript/lib/typescriptServices" {
 declare interface Window {
     require : any;
     define : any;
+    sourceMappedStackTrace : any;
+    sourceMap : any;
     __gt : {
         tsconfig : any;
         siteRoot : string;

@@ -1,18 +1,22 @@
-import {DiagInfo, Module, RunRet} from "./types";
-import {esc, mkElement} from "./dom";
-import {assertNever, objEntries} from "./util";
+import {DiagInfo, Module, Modules, RunRet} from "./types";
+import {html as h} from "./dom";
+import {assertNever} from "./util";
+import {mapStackTrace} from "./trace";
 
-const stringify = (x : any) : string =>
+const unnamedTypes = [Object, String, Number, RegExp, Date];
+
+const stringify = (x : any) : Node =>
     typeof x === "string"
-    ? esc(x)
+    ? document.createTextNode(x)
     : typeof x === "undefined"
-    ? "<span class='gt-log-special'>undefined</span>"
-    : esc(
-        ( x.constructor && x.constructor !== Object
-          ? x.constructor.name + " "
-          : ""
-        ) +
-            JSON.stringify(x, null, 2));
+    ? h("span", {class: "gt-log-special"}, ["undefined"])
+    : x instanceof Error
+    ? document.createTextNode(x.toString())
+    : document.createTextNode(
+        ( x.constructor && !unnamedTypes.includes(x.constructor)
+        ? x.constructor.name + " "
+        : ""
+        ) + JSON.stringify(x, null, 2));
 
 type LogTag = "result" | "log" | "syntax" | "types" | "runtime";
 
@@ -21,84 +25,86 @@ const logTagInfo = (tag : LogTag) : string =>
         result: "result",
         log: "info",
         syntax: "syntax error",
-        types: "type error",
+        types: "semantic error",
         runtime: "runtime error"
     })[tag];
 
 const writeToOutput =
     (m : Module) =>
     (tag : LogTag) =>
-    (html : Array<string>, data? : {[k : string] : string}) => {
+    (html : Array<Node>, data? : {[k : string] : any}) => {
         const entry =
-            mkElement(
-                `<li class='gt-log-entry gt-log-entry-${tag}'>`,
-                "<span class='gt-log-tag'>",
-                logTagInfo(tag),
-                ":</span> ",
-                html.join(""),
-                // esc(xs.map(x => x.toString()).join(" ")),
-                "</li>"
-            );
-        for (const [k, v] of objEntries(data || {})) {
-            entry.dataset[k] = v;
-        };
+            h("li",
+              {class: `gt-log-entry gt-log-entry-${tag}`},
+              [ h("span",
+                  {class: "gt-log-tag"},
+                  [logTagInfo(tag), ": "]),
+                ...html
+              ],
+              {data});
         m.output.appendChild(entry);
     };
 
 export const writeLog = (m : Module) => (...xs : Array<any>) =>
     writeToOutput(m)("log")(
         xs.map(
-            x => "<span class='gt-log-item'>" +
-                stringify(x) +
-                "</span> "
-        ));
+            x => h("span", {class: "gt-log-item"}, [stringify(x)])));
 
 export const writeDiag = (m : Module) => (diag : DiagInfo) => {
     const pos = diag.position;
     writeToOutput(m)(diag.diagType)(
         [
-            "<span class='gt-log-diag-module'>",
-            esc(diag.module + ".ts"),
-            "</span>: ",
-            "<span class='gt-log-diag-message'>",
-            esc(diag.message),
-            "</span>"
+            h("span",
+              {class: "gt-log-diag-module gt-log-goto"},
+              [`${diag.module}.ts`]),
+            document.createTextNode(":"),
+            h("span",
+              {class: "gt-log-diag-message"},
+              [diag.message])
         ],
         {
+            path: diag.module,
             line: pos === undefined ? "" : pos.line.toString(),
             column: pos === undefined ? "" :  pos.column.toString()
         });
 };
 
-export const writeRuntime = (m : Module) => (err : any) => {
-    const requireMap : any = (err as any).requireMap;
-    if (err instanceof Error && requireMap) {
+export const writeRuntime = (m : Module, ms : Modules) => (err : any) => {
+    // const requireMap : any = (err as any).requireMap;
+    if (err instanceof Error && err.stack) {
         writeToOutput(m)("runtime")([
-            "<span class='gt-log-runtime-message'>",
-            err.message,
-            "</span>"
+            h("span",
+              {class: "gt-log-trace"},
+              mapStackTrace(err.stack, ms))
         ]);
     }
     else if (err instanceof Error) {
         writeToOutput(m)("runtime")([
-            "<span class='gt-log-runtime-error-name'>",
-            err.name,
-            "</span>: ",
-            "<span class='gt-log-runtime-message'>",
-            err.message,
-            "</span>"
+            h("span",
+              {class: "gt-log-trace"},
+              [ stringify(err),
+                h("span",
+                  {class: "gt-log-trace-note"},
+                  ["Note: use Chrome or Firefox to enable clickable source mapped traces."])
+              ])
         ]);
     }
     else {
-        writeToOutput(m)("runtime")([stringify(err)]);
+        writeToOutput(m)("runtime")([
+            h("span",
+              {class: "gt-log-trace"},
+              [ stringify(err),
+                h("span",
+                  {class: "gt-log-trace-note"},
+                  ["Note: throw an instance of Error to enable clickable source mapped traces."])
+              ])
+        ]);
     }
 };
 
 export const writeRet = (m : Module) => (x : any) =>
     writeToOutput(m)("result")([
-        "<span class='gt-log-result'>",
-        stringify(x),
-        "</span>"
+        h("span", {class: "gt-log-result"}, [stringify(x)])
     ]);
 
 export const writeCanvas =
@@ -110,7 +116,7 @@ export const writeCanvas =
         return canvas.getContext("2d") as CanvasRenderingContext2D;
     };
 
-export const writeResult = (m : Module, x : RunRet) => {
+export const writeResult = (m : Module, ms : Modules, x : RunRet) => {
     if (x.tag === "diagnostics") {
         for (const diag of x.val) {
             writeDiag(m)(diag)
@@ -120,7 +126,7 @@ export const writeResult = (m : Module, x : RunRet) => {
         writeRet(m)(x.val);
     }
     else if (x.tag === "runtime" || x.tag === "require") {
-        writeRuntime(m)(x.val);
+        writeRuntime(m, ms)(x.val);
     }
     else {
         assertNever(x);

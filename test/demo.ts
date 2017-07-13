@@ -11,10 +11,9 @@ const gtlib : $GT = {
     assert,
     assertp,
     log: (...xs : Array<any>) => {},
-    withCanvas: <A>(
-        f : (ctx : CanvasRenderingContext2D) => A,
-        width : number = 300,
-        height : number = 150
+    canvas: <A>(
+        size : number | [number, number],
+        f : (ctx : CanvasRenderingContext2D) => A
     ) : A =>
         f(mockCanvasContext)
 };
