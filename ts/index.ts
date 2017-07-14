@@ -7,17 +7,19 @@ import ts from "./ts-services";
 import {Diag, RunRet, Editor, Module, Modules} from "./types";
 import {clearOutput, writeResult} from "./output";
 import {data, html as h} from "./dom";
+import {amdRequire} from "./amd";
+import {siteRoot, scrollbarSize} from "./config";
 
 declare function requestIdleCallback(f : () => void) : void;
 
 const resetRequireError = () => {
-    window.require.onError = (e : any) => { throw e; };
+    amdRequire.onError = (e : any) => { throw e; };
 };
 
 const prequire = async (paths : Array<string>) : Promise<any> =>
     new Promise((res, rej) => {
-        window.require.onError = rej;
-        window.require(
+        amdRequire.onError = rej;
+        amdRequire(
             paths,
             function() {
                 res([].slice.call(arguments));
@@ -32,9 +34,6 @@ const prequire = async (paths : Array<string>) : Promise<any> =>
             resetRequireError();
             throw e;
         });
-
-const scrollbarSize = window.__gt.scrollbarSize;
-const siteRoot = window.__gt.siteRoot;
 
 const fetchText = (url : string) : Promise<string> =>
     window.fetch(url).then(r => r.text());
@@ -238,7 +237,7 @@ const runModule =
                 tag: "run",
                 val: withGtLib(mod, async () => {
                     for (const m of relevant) {
-                        window.require.undef(m.path);
+                        amdRequire.undef(m.path);
                     }
                     try {
                         await updateJs(relevant);

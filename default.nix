@@ -5,79 +5,99 @@
 with pkgs;
 with builtins;
 rec {
-  inherit yarn nodejs pandoc;
+  inherit yarn nodejs pandoc rsync;
   site-root = "/gettyped";
   main-js = "main.js";
   scrollbar-size = "7";
   ghcWith = pkgs.haskellPackages.ghcWithPackages;
-  mkHsBin = name: mainDir: inputs: pkgs.stdenv.mkDerivation {
-    inherit name;
-    src = mainDir;
-    phases = "unpackPhase buildPhase";
+  without-store = path:
+    concatStringsSep "/" (lib.drop 3 (lib.splitString "/" path));
+  unpack-tree = paths: runCommand "unpack-tree" {}
+    ( ''mkdir -p "$out"
+      ''
+      +
+      ( concatStringsSep "\n"
+        ( map (p:
+            let
+              opName = elemAt p 0;
+              from = elemAt p 1;
+              to = elemAt p 2;
+              ops = {cp = "cp -r"; ln = "ln -s"; rsync = "${rsync}/bin/rsync -a";};
+              op = getAttr opName ops;
+            in
+              ''echo ${op} ${from} ${to}
+                mkdir -p "$(dirname "$out/${to}")"
+                ${op} "${from}" "$out/${to}"
+              ''
+          ) paths
+        )
+      )
+    );
+  mkHsBin = path: inputs: pkgs.stdenv.mkDerivation rec {
+    name = baseNameOf path;
     buildInputs = [(ghcWith inputs)];
+    src = unpack-tree [["cp" path "hs/${name}"]];
+    phases = "unpackPhase buildPhase";
     buildPhase = ''
       mkdir -p "$out/bin"
-      ghc -O2 --make Main.hs -o "$out/bin/${name}";
+      mkdir -p "tmp"
+      exec ghc -O2 \
+        --make "hs/${name}/Main.hs" \
+        -odir "./tmp" \
+        -hidir "./tmp" \
+        -o "$out/bin/${name}"
     '';
   };
-  module-extractor = mkHsBin "extract-modules" ./generator/modules (p: [p.pandoc]);
+  module-extractor = mkHsBin ./hs/extract-modules (p: [p.pandoc]);
   # module-filter = mkHsBin "module-filter" ./generator/module-filter (p: [p.pandoc]);
-  html-filter = mkHsBin "html-filter" ./generator/html-filter (p: [p.pandoc p.tagsoup]);
-  require-js = pkgs.fetchurl {
-    url = "http://requirejs.org/docs/release/2.3.3/minified/require.js";
-    sha256 = "1bxc9bcyl88bbil1vcgvxc2npfcz7xx96xmrbsx0dq7mx1yrp90c";
-  };
-  node-deps = pkgs.stdenv.mkDerivation {
+  html-filter = mkHsBin ./hs/html-filter (p: [p.pandoc p.tagsoup]);
+  node-deps = pkgs.stdenv.mkDerivation rec {
     name = "node-deps";
-    srcs = [./package.json ./yarn.lock];
-    sourceRoot = "srcroot";
+    src = unpack-tree [
+      ["ln" ./package.json "package.json"]
+      ["ln" ./yarn.lock "yarn.lock"]
+    ];
     phases = "unpackPhase buildPhase";
     buildInputs = [yarn];
-    unpackPhase = ''
-      mkdir "$sourceRoot"
-      ln -s "${./package.json}" "$sourceRoot/package.json"
-      ln -s "${./yarn.lock}" "$sourceRoot/yarn.lock"
-    '';
     buildPhase = ''
       mkdir "$out"
       export HOME="$out/.yarn-home"
-      yarn --pure-lockfile --modules-folder "$out"
+      exec yarn --pure-lockfile --modules-folder "$out/node_modules"
+    '';
+  };
+  config-js = writeTextFile {
+    name = "config.js";
+    text = ''
+      (function() {
+        window.__gt = {
+          tsconfig: ${readFile ./tsconfig-base.json},
+          siteRoot: "${site-root}",
+          scrollbarSize: ${scrollbar-size}
+        }
+      }();
     '';
   };
   compile-js = pkgs.stdenv.mkDerivation rec {
+    inherit node-deps;
     name = "compile-js";
+    src = unpack-tree [
+      ["cp" ./ts "ts"]
+      ["ln" ./tsconfig-base.json "tsconfig-base.json"]
+      ["ln" ./webpack.config.ts "webpack.config.ts"]
+      ["cp" (node-deps + "/node_modules") "node_modules"]
+    ];
     buildInputs = [nodejs];
     phases = "unpackPhase buildPhase";
-    sourceRoot = "srcroot";
-    unpackPhase = ''
-      export NODE_PATH="$sourceRoot/node_modules"
-      mkdir "$sourceRoot"
-      cp -r "${./ts}" "$sourceRoot/ts"
-      cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
-      cp "${./webpack.config.ts}" "$sourceRoot/webpack.config.ts"
-      cp -r "${node-deps}" "$sourceRoot/node_modules"
-    '';
-    injected-js = writeTextFile {
-      name = "injected.js";
-      text = ''
-        (function() {
-          window.__gt = {
-            tsconfig: ${readFile ./tsconfig-base.json},
-            siteRoot: "${site-root}",
-            scrollbarSize: ${scrollbar-size}
-          };
-        })();
-      '';
-    };
     buildPhase = ''
       mkdir "$out"
-      outjs="$out/${main-js}"
-      export NODE_PATH=./node_modules
-      "${node-deps}/.bin/webpack" --config ./webpack.config.ts
-      # "${node-deps}/.bin/tsc" --project "./ts/tsconfig.json"
-      cat "${injected-js}" \
-        "main.js" \
-        >"$outjs"
+      mainjs="$out/${main-js}"
+
+      export NODE_PATH="./node_modules"
+      "./node_modules/.bin/webpack" \
+          --config ./webpack.config.ts \
+          --output-path . \
+          --output-filename main.js || exit 1
+      cat "${config-js}" "main.js" >"$mainjs" || exit 1
     '';
   };
   page-html = path: absPath:
@@ -103,31 +123,27 @@ rec {
   };
   page-modules = absPath: pkgs.stdenv.mkDerivation {
     name = "gettyped-page-modules";
-    sourceRoot = "srcroot";
+    src = unpack-tree [
+      ["cp" absPath "page.org"]
+      ["cp" ./tsconfig-base.json "tsconfig-base.json"]
+      ["cp" ./tsconfig.json "tsconfig.json"]
+      ["cp" ./test "test"]
+      ["cp" ./ts "ts"]
+    ];
     phases = "unpackPhase buildPhase checkPhase";
     buildInputs = [module-extractor];
     checkInputs = [nodejs rsync];
-    unpackPhase = ''
-      mkdir "$sourceRoot"
-      echo absPath ${absPath}
-      ls ${absPath}
-      cp "${absPath}" "$sourceRoot/page.org"
-      cp "${./tsconfig-base.json}" "$sourceRoot/tsconfig-base.json"
-      cp "${./tsconfig.json}" "$sourceRoot/tsconfig.json"
-      cp -r "${./test}" "$sourceRoot/test"
-      cp -r "${./ts}" "$sourceRoot/ts"
-    '';
     buildPhase = ''
-      mkdir "$out"
-      extract-modules page.org "$out"
+      mkdir -p "$out"
+      extract-modules page.org "$out/modules"
     '';
     doCheck = true;
     checkPhase = ''
       if [[ -n $(ls -A "$out") ]]
       then
         export PATH="$PATH:${nodejs}/bin"
-        "${rsync}/bin/rsync" -aL "$out/" modules/
-        cp -r "${node-deps}" node_modules
+        "${rsync}/bin/rsync" -aL "$out/modules/" modules/
+        cp -r "${node-deps}/node_modules" node_modules
         NODE_PATH=.:./modules:./ts \
           "./node_modules/.bin/ts-node" \
           -P test \
@@ -175,7 +191,7 @@ rec {
       done
     '';
     buildPhase = ''
-      "${node-deps}/.bin/tsc" -p . --outFile "$out" >/dev/null || {
+      "${node-deps}/node_modules/.bin/tsc" -p . --outFile "$out" >/dev/null || {
         if [[ $? = 1 ]]
         then
           echo 'No code generated (check diagnostics)'
@@ -187,9 +203,9 @@ rec {
   libs-d-ts = writeTextFile {
     name = "libs.d.ts";
     text = lib.concatMapStrings readFile [
-      "${node-deps}/typescript/lib/lib.es6.d.ts"
-      "${node-deps}/typescript/lib/lib.es2016.full.d.ts"
-      "${node-deps}/typescript/lib/lib.es2017.object.d.ts"
+      "${node-deps}/node_modules/typescript/lib/lib.es6.d.ts"
+      "${node-deps}/node_modules/typescript/lib/lib.es2016.full.d.ts"
+      "${node-deps}/node_modules/typescript/lib/lib.es2017.object.d.ts"
       ./ts/d/lib.gt.d.ts
     ];
   };
@@ -203,7 +219,7 @@ rec {
     buildPhase = ''
       mkdir -p "$out/modules"
       ln -s "${./static}" "$out/static"
-      ln -s "${node-deps}/monaco-editor/min/vs" "$out/vs"
+      ln -s "${node-deps}/node_modules/monaco-editor/min/vs" "$out/vs"
       ln -s "${./css/main.css}" "$out/main.css"
       ln -s "${libs-d-ts}" "$out/libs.d.ts"
       ln -s "${compile-js}/${main-js}" "$out/${main-js}"
