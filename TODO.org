@@ -2,6 +2,7 @@
 
 * TODO rename 'why' path
 * TODO refined types and smart constructors
+* TODO sum types and static exhaustiveness checks
 * TODO taming the null pointer
 * TODO safe escaped strings
 * TODO safe show strings (shows`foo ${3} bar`)
