@@ -17,7 +17,7 @@ export const text = (s : string) : Text =>
 
 export const html = (
     name : string,
-    attrs : Attrs,
+    attrs? : Attrs,
     children? : Array<string | Node>,
     opts? : {
         data?: {[k : string] : any},
@@ -26,7 +26,7 @@ export const html = (
 ) : HTMLElement => {
     const {data, handlers} = opts || {data: {}, handlers: {}};
     const elem = document.createElement(name);
-    for (const [k, v] of Object.entries(attrs)) {
+    for (const [k, v] of Object.entries(attrs || {})) {
         elem.setAttribute(k, v);
     }
     for (const [k, v] of Object.entries(data || {})) {

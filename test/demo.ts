@@ -1,15 +1,19 @@
 import * as painless from "painless";
 import * as globfs from "glob-fs";
 import * as fs from "fs";
-import {assert, assertp} from "gt-lib";
+import * as gt from "gt-lib-shared";
 
-const mockCanvasContext : CanvasRenderingContext2D = {
-    fillRect(..._ : any[]) : any {}
-} as any;
+const noop = (..._ : Array<any>) : any => {};
+
+const mockCanvasContext : CanvasRenderingContext2D = new Proxy({}, {
+    get: () => noop
+}) as any;
 
 const gtlib : $GT = {
-    assert,
-    assertp,
+    assert: gt.assert,
+    assertp: gt.assertp,
+    randomFloat: gt.randomFloat,
+    randomInt: gt.randomInt,
     log: (...xs : Array<any>) => {},
     canvas: <A>(
         size : number | [number, number],
@@ -83,12 +87,31 @@ const expectNoError = (p : string) =>
         () =>
             withSilentConsole(
                 () =>
-                    painless.assert.doesNotThrow(
-                        () => require(p))));
+                    painless.assert.isFulfilled(
+                        new Promise((res, rej) => {
+                            try {
+                                const m = require(p);
+                                if (typeof m.run === "function") {
+                                    const x = m.run();
+                                    if (x instanceof Promise) {
+                                        x.then(res);
+                                    }
+                                    else {
+                                        res();
+                                    }
+                                }
+                                else {
+                                    res();
+                                }
+                            }
+                            catch (e) {
+                                rej(e);
+                            }
+                        }))));
 
 for (const p of paths) {
     fs.existsSync(p + ".se")
-        ? expectStaticError
+        ? expectStaticError(p)
         : fs.existsSync(p + ".re")
         ? expectRuntimeError(p)
         : expectNoError(p);

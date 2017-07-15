@@ -1,15 +1,15 @@
 #!/usr/bin/env nix-build
 
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import <nixpkgs> {}, config-path ? ./config.json }:
 
 with pkgs;
 with builtins;
 rec {
   inherit yarn nodejs pandoc rsync;
-  site-root = "/gettyped";
   main-js = "main.js";
-  scrollbar-size = "7";
   ghcWith = pkgs.haskellPackages.ghcWithPackages;
+  config-json = readFile config-path;
+  config = fromJSON config-json;
   without-store = path:
     concatStringsSep "/" (lib.drop 3 (lib.splitString "/" path));
   unpack-tree = paths: runCommand "unpack-tree" {}
@@ -25,8 +25,7 @@ rec {
               ops = {cp = "cp -r"; ln = "ln -s"; rsync = "${rsync}/bin/rsync -a";};
               op = getAttr opName ops;
             in
-              ''echo ${op} ${from} ${to}
-                mkdir -p "$(dirname "$out/${to}")"
+              ''mkdir -p "$(dirname "$out/${to}")"
                 ${op} "${from}" "$out/${to}"
               ''
           ) paths
@@ -54,8 +53,8 @@ rec {
   node-deps = pkgs.stdenv.mkDerivation rec {
     name = "node-deps";
     src = unpack-tree [
-      ["ln" ./package.json "package.json"]
-      ["ln" ./yarn.lock "yarn.lock"]
+      ["cp" ./package.json "package.json"]
+      ["cp" ./yarn.lock "yarn.lock"]
     ];
     phases = "unpackPhase buildPhase";
     buildInputs = [yarn];
@@ -71,10 +70,9 @@ rec {
       (function() {
         window.__gt = {
           tsconfig: ${readFile ./tsconfig-base.json},
-          siteRoot: "${site-root}",
-          scrollbarSize: ${scrollbar-size}
+          config: ${config-json}
         }
-      }();
+      }());
     '';
   };
   compile-js = pkgs.stdenv.mkDerivation rec {
@@ -108,8 +106,8 @@ rec {
     buildInputs = [pandoc html-filter];
     buildPhase = ''
       mkdir -p "$out${path}"
-      pandoc -f org -t html5 \
-        -V site-root=${site-root} \
+      pandoc -f org -t html5 --smart \
+        -V site-root=${config.siteRoot} \
         -V main-js=${main-js} \
         --parse-raw \
         --no-highlight \
@@ -128,7 +126,8 @@ rec {
       ["cp" ./tsconfig-base.json "tsconfig-base.json"]
       ["cp" ./tsconfig.json "tsconfig.json"]
       ["cp" ./test "test"]
-      ["cp" ./ts "ts"]
+      ["cp" ./ts/gt-lib-shared.ts "ts/gt-lib-shared.ts"]
+      ["cp" ./ts/d/lib.gt.d.ts "ts/d/lib.gt.d.ts"]
     ];
     phases = "unpackPhase buildPhase checkPhase";
     buildInputs = [module-extractor];

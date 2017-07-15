@@ -18,16 +18,17 @@ const stringify = (x : any) : Node =>
         : ""
         ) + JSON.stringify(x, null, 2));
 
-type LogTag = "result" | "log" | "syntax" | "types" | "runtime" | "note";
+type LogTag = "result" | "log" | "syntax" | "types" | "runtime" | "note" | "canvas";
 
 const logTagInfo = (tag : LogTag) : string =>
     ({
-        result: "result",
-        log: "info",
-        syntax: "syntax error",
-        types: "semantic error",
-        runtime: "runtime error",
-        note: "!!"
+        result: "result:",
+        log: "info:",
+        syntax: "syntax error:",
+        types: "semantic error:",
+        runtime: "runtime error:",
+        note: "!!",
+        canvas: ""
     })[tag];
 
 const writeToOutput =
@@ -39,7 +40,7 @@ const writeToOutput =
               {class: `gt-log-entry gt-log-entry-${tag}`},
               [ h("span",
                   {class: "gt-log-tag"},
-                  [logTagInfo(tag), ": "]),
+                  [logTagInfo(tag)]),
                 ...html
               ],
               {data});
@@ -118,7 +119,7 @@ export const writeCanvas =
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
-        m.output.appendChild(canvas);
+        writeToOutput(m)("canvas")([canvas]);
         return canvas.getContext("2d") as CanvasRenderingContext2D;
     };
 

@@ -328,12 +328,12 @@ table td {
 
 /* * Icons */
 
-[data-icon]::before {
+[data-icon]::after {
     content: attr(data-icon);
     font-family: 'Material Icons';
     font-weight: normal;
     font-style: normal;
-    font-size: 1em;
+    font-size: 24px;
     display: inline-block;
     vertical-align: middle;
     width: 1em;
@@ -345,10 +345,10 @@ table td {
     white-space: nowrap;
     direction: ltr;
 
-    * Support for all WebKit browsers. */
+    /* Support for all WebKit browsers. */
     -webkit-font-smoothing: antialiased;
 
-    * Support for Safari and Chrome. */
+    /* Support for Safari and Chrome. */
     text-rendering: optimizeLegibility;
 
     /* Support for Firefox. */
@@ -376,6 +376,28 @@ summary > .gt-less-more::after {
 
 details[open] > summary > .gt-less-more::after {
     content: 'expand_less';
+}
+
+.gt-editor-load-spinner.gt-do-spin > i::after {
+    content: ".";
+    animation-name: gt-editor-load-spinner;
+    animation-duration: 1.4s;
+    animation-iteration-count: infinite;
+    animation-fill-mode: both;
+}
+
+.gt-editor-load-spinner.gt-do-spin > i:nth-child(2)::after {
+    animation-delay: 0.2s;
+}
+
+.gt-editor-load-spinner.gt-do-spin > i:nth-child(3)::after {
+    animation-delay: 0.4s;
+}
+
+@keyframes gt-editor-load-spinner {
+    0% { opacity: 0.2 }
+    20% { opacity: 1 }
+    100% { opacity: 0.2 }
 }
 
 details.gt-module-section[open] {
@@ -459,7 +481,7 @@ button.material-icons {
     cursor: pointer;
 }
 
-canvas {
+.gt-log-entry > canvas {
     box-shadow: 0px 1px 5px 0px black;
 }
 

@@ -308,6 +308,8 @@ const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
 export const init =
     () => {
         manageFocusOutlines(document, "visible-focus-outline");
+        const sections =
+            [].slice.call(document.getElementsByClassName("gt-module-section"));
         const opts = getTsOpts();
         const m = monaco;
         const mts = m.languages.typescript;
@@ -319,7 +321,6 @@ export const init =
             allowNonTsExtensions: false,
             inlineSourceMap: true,
             inlineSources: true,
-            // lib: ["es2016", "es2016.array.include", "dom", "dom.iterable"],
             noImplicitAny: true,
             module: mts.ModuleKind.AMD,
             jsx: undefined as any,
@@ -336,10 +337,9 @@ export const init =
             });
         }
 
-        const sections = document.getElementsByClassName("gt-module-section");
         const modules : Modules =
             objMap<Module>(
-                [].slice.call(sections).
+                sections.
                     filter(
                         (sec : HTMLElement) => {
                             const sel = sec.getElementsByClassName("rundoc-block")[0];
@@ -347,11 +347,6 @@ export const init =
                                 sel.getAttribute("rundoc-module");
                         }).
                     map((sec : HTMLElement) => {
-                        const summary = sec.getElementsByTagName("summary")[0];
-                        const lessMore =
-                            h("i",
-                              {class: "gt-less-more material-icons md-24 md-dark"});
-                        summary.appendChild(lessMore);
                         const sel = sec.getElementsByClassName("rundoc-block")[0] as HTMLElement;
                         const text = sel.innerText.trim();
                         sel.textContent = "";
@@ -397,6 +392,7 @@ export const init =
                         return [path, {
                             editor,
                             originalText: text,
+                            section: sec,
                             container: sel,
                             model,
                             path,
@@ -417,6 +413,9 @@ export const init =
             m.revertButton.addEventListener("click", () => revertModule(m, modules));
             m.output.addEventListener("click", handleOutputClick(modules));
             m.clearButton.addEventListener("click", () => clearOutput(m));
+            const spinner =
+                m.section.getElementsByClassName("gt-editor-load-spinner")[0];
+            spinner.classList.remove("gt-do-spin");
         }
 
         window.addEventListener("resize", () => resizeEditors(modules));

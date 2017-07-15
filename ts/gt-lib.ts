@@ -1,15 +1,6 @@
 import {Module} from "./types";
 import {writeLog, writeCanvas} from "./output";
-
-export const assert = (x : boolean, msg? : string) : void => {
-    if (!x) {
-        throw new Error("Assertion failed. " + (msg || ""));
-    }
-};
-
-export const assertp =
-    async (p : Promise<boolean>, msg? : string) : Promise<void> =>
-    assert(await p, msg);
+import {assert, assertp, randomInt, randomFloat} from "./gt-lib-shared";
 
 const mkCanvas =
     <A>(m : Module) => (
@@ -26,6 +17,8 @@ const mkCanvas =
 export const mk$GT = (m : Module) : $GT => ({
     assert,
     assertp,
+    randomInt,
+    randomFloat,
     log: writeLog(m),
     canvas: mkCanvas(m)
 });

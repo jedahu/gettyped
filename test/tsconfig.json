@@ -3,7 +3,8 @@
     "include": [
         "./**/*.ts",
         "../modules/**/*.ts",
-        "../ts/**/*.ts"
+        "../ts/gt-lib-shared.ts",
+        "../ts/d/lib.gt.d.ts"
     ],
     "compilerOptions": {
         "baseUrl": "../",

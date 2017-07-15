@@ -8,6 +8,7 @@ export type Module = {
     uri : monaco.Uri;
     imports : Array<string>;
     originalText : string;
+    section: HTMLElement;
     container : HTMLElement;
     runButton : HTMLElement;
     revertButton : HTMLElement;

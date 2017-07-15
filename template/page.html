@@ -11,11 +11,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
     <script>
         require.config({paths: {vs: "$site-root$/vs"}});
-        window.MonacoEnvironment = {
-         		getWorkerUrl: function(workerId, label) {
-                return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
-            }
-        };
+        // window.MonacoEnvironment = {
+        //  		getWorkerUrl: function(workerId, label) {
+        //         return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
+        //     }
+        // };
         // require([
         //     "vs/editor/editor.main",
         //     "vs/language/typescript/lib/typescriptServices"
@@ -46,6 +46,14 @@ $body$
         </div>
     </article>
     <script>
+        const sections =
+            [].slice.call(document.getElementsByClassName("gt-module-section"));
+        for (const sec of sections) {
+            const spinner =
+                sec.getElementsByClassName("gt-editor-load-spinner")[0];
+            spinner.classList.add("gt-do-spin");
+            spinner.setAttribute("title", "Loading monaco editor");
+        }
         require(["GetTyped"], function(m) { m.init(); });
     </script>
   </body>

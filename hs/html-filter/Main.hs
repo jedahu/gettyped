@@ -75,6 +75,15 @@ convertRundocBlock mod attrs children =
     head = summary mod
     tools = TagBranch "div" [("class", "gt-module-tools")] []
     output = TagBranch "ul" [("class", "gt-module-output")] []
-    summary s = TagBranch "summary" [] [TagLeaf (TagText (s <> ".ts"))]
+    summary s = TagBranch "summary" []
+                [ TagBranch "span" [("class", "gt-module-title")]
+                  [ TagLeaf (TagText (s <> ".ts")) ]
+                , TagBranch "i" [("class", "gt-less-more material-icons md-24 md-dark")] []
+                , TagBranch "span" [("class", "gt-editor-load-spinner")]
+                  [ TagBranch "i" [] []
+                  , TagBranch "i" [] []
+                  , TagBranch "i" [] []
+                  ]
+                ]
     code = TagBranch "pre" (M.toList attrs) children
     rest = TagBranch "div" [] [code, tools, output]

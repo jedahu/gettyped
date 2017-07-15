@@ -1,5 +1,15 @@
-export const tsconfig = window.__gt.tsconfig;
+type Config = {
+    tsconfig : any;
+    config : {
+        siteRoot : string;
+        scrollbarSize : number;
+    };
+};
 
-export const siteRoot = window.__gt.siteRoot;
+const gt : Config = (window as any).__gt;
 
-export const scrollbarSize = window.__gt.scrollbarSize;
+export const siteRoot : string = gt.config.siteRoot;
+
+export const scrollbarSize : number = gt.config.scrollbarSize;
+
+export const tsconfig : any = gt.tsconfig;

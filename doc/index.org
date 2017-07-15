@@ -1,7 +1,10 @@
 #+TITLE: Get Typed
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-10 Mon]
+#+DATE: [2017-07-15 Sat]
+
+Types create guarantees. They describe properties of a program that can be
+verified without running the program.
 
 
 * Topics
