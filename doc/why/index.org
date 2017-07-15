@@ -18,7 +18,9 @@ export const square0 : any = (size : any) : any => {
         ctx.translate(x + size, y + size);
         ctx.rotate(r);
         ctx.fillStyle = "#" + colour.toString(16);
+        ctx.strokeStyle = "black";
         ctx.fillRect(-size / 2, -size / 2, size, size);
+        ctx.strokeRect(-size / 2, -size / 2, size, size);
         return {
             colour,
             translation: [x, y],
