@@ -1,0 +1,30 @@
+#+DATE: [2017-07-16 Sun]
+
+* TODO rename 'why' path
+* TODO refined types and smart constructors
+* TODO taming the null pointer
+* TODO safe escaped strings
+* TODO safe show strings (shows`foo ${3} bar`)
+* TODO global and local configuration, statically ensured
+* TODO static dependency injection
+* TODO statically checked roles/permissions
+* TODO statically checked resource access
+* TODO statically scoped resource lifetimes
+* TODO statically restricted effects
+* TODO deep immutable updates
+* TODO statically calculated partial record fetch
+
+* TODO gt-lib page
+* TODO output jank on replay
+* TODO output text size vs body text size
+* TODO module section bottom margin
+* TODO module section border color
+* TODO body bottom padding
+* TODO toc heading and styling
+* TODO home page link
+* TODO test in firefox
+* TODO test in edge
+
+
+* TODO optional editor loading
+* TODO browser/device detection -> editor load default
