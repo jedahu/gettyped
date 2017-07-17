@@ -1,7 +1,7 @@
 #+TITLE: Maybe - null done right
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-11 Tue]
+#+DATE: [2017-07-17 Mon]
 
 * Motivation
 
@@ -83,7 +83,7 @@ export const present = (n : Name) : string => `${n.first} ${n.last}\n`;
 
 A typical null-check,
 #+BEGIN_SRC ts :module typical-check
-import * as t from "name";
+import * as t from "./name";
 
 const line = (n : t.Name|null) : string =>
       n === null ? t.absent() : t.present(n);
@@ -99,7 +99,7 @@ exhibits a lack of type safety in two ways:
 check.
 
 #+BEGIN_SRC ts :module assume-not-null :error runtime
-import * as t from "name";
+import * as t from "./name";
 
 const line = (n : t.Name|null) : string =>
       t.present(n as t.Name);
@@ -112,7 +112,7 @@ $gt.log(a + b);
 *Boolean blindness.* The compiler doesn’t stop accidental dereferencing, as in
 this transposition.
 #+BEGIN_SRC ts :module accidental-dereference :error runtime
-import * as t from "name";
+import * as t from "./name";
 
 const line = (n : t.Name|null) : string =>
       n === null ? t.present(n as any as t.Name) : t.absent();
@@ -142,8 +142,8 @@ find yourself in need of sat solvers to figure out what the hell is going on.
 
 ~Maybe~ solves both issues.
 #+BEGIN_SRC ts :module solved
-import * as m from "maybe-minimal";
-import * as t from "name";
+import * as m from "./maybe-minimal";
+import * as t from "./name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       n.fold(t.absent, t.present);
@@ -156,8 +156,8 @@ $gt.log(a + b);
 *Assumption.* The programmer cannot get at the value of a ~Maybe~ without going
 through ~Maybe.fold~.
 #+BEGIN_SRC ts :module forced-to-handle :error static
-import * as m from "maybe-minimal";
-import * as t from "name";
+import * as m from "./maybe-minimal";
+import * as t from "./name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       t.present(n);
@@ -170,8 +170,8 @@ $gt.log(a + b);
 *Boolean blindness.* ~Maybe.fold~ provides a value only to the ~just~ case, so
 accidental transposition results in a compile time error:
 #+BEGIN_SRC ts :module transposition-error :error static
-import * as m from "maybe-minimal";
-import * as t from "name";
+import * as m from "./maybe-minimal";
+import * as t from "./name";
 
 const line = (n : m.Maybe<t.Name>) : string =>
       n.fold(t.present, t.absent)

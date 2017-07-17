@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
     <script>
      require.config({
+         baseUrl: "$site-root$/modules",
          paths: {vs: "https://unpkg.com/monaco-editor@0.9.0/min/vs"},
          waitSeconds: 0
      });
@@ -42,6 +43,7 @@ $body$
         </div>
     </article>
     <script>
+     (function() {
         const sections =
             [].slice.call(document.getElementsByClassName("gt-module-section"));
         for (const sec of sections) {
@@ -50,7 +52,11 @@ $body$
             spinner.classList.add("gt-do-spin");
             spinner.setAttribute("title", "Loading monaco editor");
         }
-        require(["GetTyped"], function(m) { m.init(); });
+        const config = {
+            pageNs: "$page-ns$"
+        };
+        require(["GetTyped"], function(m) { m.init(config); });
+     })();
     </script>
   </body>
 </html>

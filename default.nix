@@ -109,6 +109,7 @@ rec {
       pandoc -f org -t html5 --smart \
         -V site-root=${config.siteRoot} \
         -V main-js=${main-js} \
+        -V page-ns=${baseNameOf (dirOf absPath)} \
         --parse-raw \
         --no-highlight \
         --section-divs \
@@ -133,8 +134,9 @@ rec {
     buildInputs = [module-extractor];
     checkInputs = [nodejs rsync];
     buildPhase = ''
-      mkdir -p "$out"
-      extract-modules page.org "$out/modules"
+      dest="$out/modules/${baseNameOf (dirOf absPath)}"
+      mkdir -p "$dest"
+      extract-modules page.org "$dest"
     '';
     doCheck = true;
     checkPhase = ''
@@ -228,7 +230,7 @@ rec {
       done
       for m in ${concatStringsSep " " modules}
       do
-        rsync -aL "$m/" "$out/modules/"
+        rsync -aL "$m/modules/" "$out/modules/"
       done
     '';
   };

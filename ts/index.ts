@@ -53,8 +53,12 @@ const importedPaths =
     (mod : Module) : Array<string> =>
     tss.preProcessFile(mod.model.getValue(), true, false).
     importedFiles.
-    map(f => f.fileName).
-    filter(p => p !== "gt-lib");
+    map(f => {
+        const fn = f.fileName;
+        return fn.startsWith("./")
+            ? fn.slice(2)
+            : fn;
+    });
 
 const updateImports = (mod : Module) : void =>
     requestIdleCallback(() => {
@@ -157,7 +161,7 @@ const getDiagnosticsMap =
     };
 
 const updateJs =
-    (modules : Array<Module>) : Promise<void> =>
+    (pageNs : string, modules : Array<Module>) : Promise<void> =>
     Promise.all(
         modules.map(async m => {
             const client = await getClient(m.uri);
@@ -165,7 +169,7 @@ const updateJs =
             m.js = emitted.
                 outputFiles[0].
                 text.
-                replace(/^define\(/, `define('${m.path}',`) +
+                replace(/^define\(/, `define('${pageNs}/${m.path}',`) +
                 `\n//# sourceURL=${m.path}.ts`;
         })).then(_ => {});
 
@@ -184,7 +188,11 @@ const diagnosticMessage = (diag : ts.Diagnostic) : string => {
 };
 
 const runModule =
-    async (mod : Module, modules : Modules) : Promise<RunRet> => {
+    async (
+        pageNs : string,
+        mod : Module,
+        modules : Modules
+    ) : Promise<RunRet> => {
         const imports = await transitivelyImportedModules(mod, modules);
         const relevant = imports.concat(mod);
         const diagMap = await getDiagnosticsMap(relevant);
@@ -220,12 +228,12 @@ const runModule =
                         amdRequire.undef(m.path);
                     }
                     try {
-                        await updateJs(relevant);
+                        await updateJs(pageNs, relevant);
                         for (const m of relevant) {
-                            // new Function(m.js)();
-                            eval(m.js);
+                            new Function(m.js)();
+                            //eval(m.js);
                         }
-                        const [m] = await prequire([mod.path]);
+                        const [m] = await prequire([`${pageNs}/${mod.path}`]);
                         const ret =
                             typeof m.run === "function"
                             ? m.run()
@@ -242,14 +250,14 @@ const runModule =
     };
 
 const runModuleDisplay =
-    async (mod : Module, modules : Modules) : Promise<void> => {
+    async ({pageNs} : Config, mod : Module, modules : Modules) : Promise<void> => {
         mod.runButton.classList.add("gt-run-spinner");
         clearOutput(mod);
         try {
             await writeResult(
                 mod,
                 modules,
-                await runModule(mod, modules));
+                await runModule(pageNs, mod, modules));
         }
         finally {
             mod.runButton.classList.remove("gt-run-spinner");
@@ -282,8 +290,12 @@ const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
     }
 };
 
+type Config = {
+    pageNs: string;
+};
+
 export const init =
-    () => {
+    (config : Config) => {
         manageFocusOutlines(document, "visible-focus-outline");
         const sections =
             [].slice.call(document.getElementsByClassName("gt-module-section"));
@@ -386,7 +398,7 @@ export const init =
         for (const m of objValues(modules)) {
             m.model.setValue(m.originalText);
             m.model.onDidChangeContent(() => contentChangeHandler(m, modules));
-            m.runButton.addEventListener("click", () => runModuleDisplay(m, modules));
+            m.runButton.addEventListener("click", () => runModuleDisplay(config, m, modules));
             m.revertButton.addEventListener("click", () => revertModule(m, modules));
             m.output.addEventListener("click", handleOutputClick(modules));
             m.clearButton.addEventListener("click", () => clearOutput(m));

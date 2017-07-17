@@ -46,7 +46,7 @@ square: |
 
 Here is the same function, typed.
 #+BEGIN_SRC ts :module square1
-import {square0} from "square0";
+import {square0} from "./square0";
 
 type SquareInfo = {
     colour: number;
@@ -85,7 +85,7 @@ runtime deviation from expected behaviour.
 It could be that =square0= originally took a =colour= argument, then someone
 inadvisedly changed it, and now this code silently ignores the argument.
 #+BEGIN_SRC ts :module wrong-arity0
-import {square0} from "square0";
+import {square0} from "./square0";
 
 export const run = () => square0(25, "red");
 #+END_SRC
@@ -101,7 +101,7 @@ $result: |
 
 With types, the error is caught at compile time.
 #+BEGIN_SRC ts :module wrong-arity1 :error static
-import {square1} from "square1";
+import {square1} from "./square1";
 
 export const run = () => square1(25, "red");
 #+END_SRC
@@ -112,7 +112,7 @@ export const run = () => square1(25, "red");
 Due to a mistake in documentation or a programmer's memory, the function is
 called with a single named options argument. It silently fails to draw.
 #+BEGIN_SRC ts :module bad-argument0
-import {square0} from "square0";
+import {square0} from "./square0";
 
 export const run = () => square0({size: 9});
 #+END_SRC
@@ -128,7 +128,7 @@ $result: |
 
 With types, the error is caught at compile time.
 #+BEGIN_SRC ts :module bad-argument1 :error static
-import {square1} from "square1";
+import {square1} from "./square1";
 
 export const run = () => square1({size: 9});
 #+END_SRC
@@ -139,7 +139,7 @@ export const run = () => square1({size: 9});
 Trans-atlantic spelling differences lead to a typo in accessing a field on the
 return value.
 #+BEGIN_SRC ts :module mishandled-return-value0 :error runtime
-import {square0} from "square0";
+import {square0} from "./square0";
 
 export const run = () => {
     const data = square0(12);
@@ -150,7 +150,7 @@ export const run = () => {
 
 With types, the error is caught at compile time.
 #+BEGIN_SRC ts :module mishandled-return-value1 :error static
-import {square1} from "square1";
+import {square1} from "./square1";
 
 export const run = () => {
     const data = square1(12);
@@ -165,7 +165,7 @@ export const run = () => {
 A dependent function is written that contains a call to a non-existent method on
 the argument.
 #+BEGIN_SRC ts :module mishandled-argument0 :error runtime
-import {square0} from "square0";
+import {square0} from "./square0";
 
 export const squares0 : any = (size : any) : any => {
     square0(size.sqrt());
@@ -180,7 +180,7 @@ export const run = () => {
 
 With types, the error is caught at compile time.
 #+BEGIN_SRC ts :module mishandled-argument1 :error static
-import {square1} from "square1";
+import {square1} from "./square1";
 
 export const squares1 = (size : number) : void => {
     square1(size.sqrt());
