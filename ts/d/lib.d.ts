@@ -19,6 +19,6 @@ declare module "vs/language/typescript/lib/typescriptServices" {
 }
 
 declare interface Window {
-    require : any;
+    requirejs : any;
     define : any;
 }

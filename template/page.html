@@ -5,21 +5,17 @@
     <title>$title$</title>
     <link rel="stylesheet" href="$site-root$/main.css"/>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/stacktrace.js/2.0.0/stacktrace.min.js"></script> -->
-    <!-- <script src="http://unpkg.co/source-map@0.5.6/dist/source-map.min.js"></script> -->
-    <!-- <script src="https://unpkg.co/sourcemapped-stacktrace@1.1.6/dist/sourcemapped-stacktrace.js"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
     <script>
-        require.config({paths: {vs: "$site-root$/vs"}});
-        // window.MonacoEnvironment = {
-        //  		getWorkerUrl: function(workerId, label) {
-        //         return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
-        //     }
-        // };
-        // require([
-        //     "vs/editor/editor.main",
-        //     "vs/language/typescript/lib/typescriptServices"
-        // ]);
+     require.config({
+         paths: {vs: "https://unpkg.com/monaco-editor@0.9.0/min/vs"},
+         waitSeconds: 0
+     });
+     window.MonacoEnvironment = {
+         getWorkerUrl: function(workerId, label) {
+             return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
+         }
+     };
     </script>
     <script src="$site-root$/$main-js$"></script>
   </head>

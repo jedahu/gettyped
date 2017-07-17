@@ -2,38 +2,16 @@ import {getTsOpts} from "./tsconfig";
 import {objMap, objValues, objEntries, arrayFlatMap} from "./util";
 import {manageFocusOutlines} from "./focus-outline";
 import {withGtLib} from "./gt-lib";
-import monaco from "./monaco";
-import ts from "./ts-services";
+import * as monaco from "./monaco";
+import * as tss from "./ts-services";
 import {Diag, RunRet, Editor, Module, Modules} from "./types";
 import {clearOutput, writeResult} from "./output";
 import {data, html as h} from "./dom";
 import {amdRequire} from "./amd";
 import {siteRoot, scrollbarSize} from "./config";
+import {prequire} from "./prequire";
 
 declare function requestIdleCallback(f : () => void) : void;
-
-const resetRequireError = () => {
-    amdRequire.onError = (e : any) => { throw e; };
-};
-
-const prequire = async (paths : Array<string>) : Promise<any> =>
-    new Promise((res, rej) => {
-        amdRequire.onError = rej;
-        amdRequire(
-            paths,
-            function() {
-                res([].slice.call(arguments));
-            });
-    }).
-    then(
-        x => {
-            resetRequireError();
-            return x;
-        },
-        e => {
-            resetRequireError();
-            throw e;
-        });
 
 const fetchText = (url : string) : Promise<string> =>
     window.fetch(url).then(r => r.text());
@@ -73,7 +51,7 @@ const resizeEditors = (mods : Modules) : void => {
 
 const importedPaths =
     (mod : Module) : Array<string> =>
-    ts.preProcessFile(mod.model.getValue(), true, false).
+    tss.preProcessFile(mod.model.getValue(), true, false).
     importedFiles.
     map(f => f.fileName).
     filter(p => p !== "gt-lib");
@@ -152,8 +130,10 @@ const refreshDependentModules = (path : string, mods : Modules) =>
 
 const getDiagnostics = async (uri : monaco.Uri) : Promise<Array<Diag>> => {
     const client = await getClient(uri);
-    const syntactic = await client.getSyntacticDiagnostics(uri.toString());
-    const semantic = await client.getSemanticDiagnostics(uri.toString());
+    const [syntactic, semantic] = await Promise.all([
+        client.getSyntacticDiagnostics(uri.toString()),
+        client.getSemanticDiagnostics(uri.toString())
+    ]);
     return syntactic.map((d) : Diag => ({...d, diagType : "syntax"})).
         concat(semantic.map((d) : Diag => ({...d, diagType: "types"})));
 };
@@ -255,9 +235,6 @@ const runModule =
                     }
                     catch (e) {
                         return ["runtime", e] as ["runtime", any];
-                    }
-                    finally {
-                        resetRequireError();
                     }
                 })
             };

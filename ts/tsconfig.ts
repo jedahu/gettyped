@@ -1,7 +1,7 @@
 import {tsconfig} from "./config";
-import ts from "./ts-services";
+import * as tss from "./ts-services";
 
-export const getTsOpts = () => ts.parseJsonConfigFileContent(
+export const getTsOpts = () => tss.parseJsonConfigFileContent(
     tsconfig,
     {
         useCaseSensitiveFileNames: true,

@@ -1,3 +1,3 @@
-export const amdRequire = window.require;
+export const amdRequire = window.requirejs;
 
 export const amdDefine = window.define;

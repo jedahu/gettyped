@@ -1,4 +1,5 @@
 const webpack = require("webpack");
+const path = require("path");
 // import * as webpack from "webpack";
 // import * as favicons from "favicons-webpack-plugin";
 
@@ -6,7 +7,7 @@ const DEV = process.env.NODE_ENV = "development";
 
 module.exports = {
     entry: {
-        main: "./ts/index.ts"
+        main: "./ts/index.ts",
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js']
@@ -20,11 +21,11 @@ module.exports = {
         }
     },
     output: {
-        path: __dirname,
+        path: ".",
         filename: '[name].js',
         libraryTarget: "amd",
-        library: "GetTyped"
-        //umdNamedDefine: true
+        library: "GetTyped",
+        umdNamedDefine: true
     },
     devtool: "",
     plugins: [

@@ -14,8 +14,7 @@
     },
     "include": [
         "./d/*.d.ts",
-        "./*.ts",
-        "../node_modules/source-map/*.js"
+        "./*.ts"
     ],
     "exclude": []
 }
