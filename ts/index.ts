@@ -1,5 +1,13 @@
 import {getTsOpts} from "./tsconfig";
-import {objMap, objValues, objEntries, arrayFlatMap, unTs, lastSegment} from "./util";
+import {
+    objMap,
+    objValues,
+    objEntries,
+    arrayFlatMap,
+    unTs,
+    lastSegment,
+    inIdleTime
+} from "./util";
 import {manageFocusOutlines} from "./focus-outline";
 import {withGtLib} from "./gt-lib";
 import * as monaco from "./monaco";
@@ -7,14 +15,11 @@ import * as tss from "./ts-services";
 import {Diag, RunRet, Editor, Module, Modules} from "./types";
 import {clearOutput, writeResult} from "./output";
 import {data, html as h} from "./dom";
-import {amdRequire} from "./amd";
 import {siteRoot, scrollbarSize} from "./config";
 import {prequire} from "./prequire";
 
-declare function requestIdleCallback(f : () => void) : void;
-
 const fetchText = (url : string) : Promise<string> =>
-    window.fetch(url).then(r => r.text());
+    fetch(url).then(r => r.text());
 
 const libs_d_ts = () =>
     [
@@ -35,7 +40,7 @@ const getClient = async (uri : monaco.Uri) : Promise<ts.LanguageService> => {
 const resizeEditor =
     (m : Pick<Module, "editor" | "model" | "container">) : void => {
         const {editor, model, container} = m;
-        window.requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
             const lh = editor.getConfiguration().lineHeight;
             const lc = model.getLineCount();
             const height = (lh * lc) + scrollbarSize;
@@ -120,23 +125,34 @@ const stopModuleSpinner = ({section} : {section : HTMLElement}) => {
     spinner.classList.remove("gt-do-spin");
 };
 
-const refreshDependentModules = (path : string, mods : Modules) =>
-    requestIdleCallback(() => {
+const refreshDependentModules = (path : string, mods : Modules) : void => {
+    inIdleTime(go());
+    function* go() : IterableIterator<void> {
         const deps = dependentModules(path, mods);
-        for (const {editor, model} of deps) {
-            requestIdleCallback(() => {
-                const pos = editor.getPosition();
-                editor.executeEdits("force-recheck", [{
-                    identifier: {major: 1, minor: 1},
-                    range: model.getFullModelRange(),
-                    text: model.getValue(),
-                    forceMoveMarkers: true
-                }]);
-                editor.setSelection(new monaco.Range(0, 0, 0, 0));
-                editor.setPosition(pos);
-            });
+        yield;
+        for (const {editor} of deps) {
+            const pos = editor.getPosition();
+            const sel = editor.getSelection();
+            yield;
+            editor.executeEdits("force-recheck", [
+                { identifier: {major: 1, minor: 1},
+                  range: new monaco.Range(0, 0, 0, 0),
+                  text: " ",
+                  forceMoveMarkers: false
+                },
+                { identifier: {major: 1, minor: 2},
+                  range: new monaco.Range(0, 0, 0, 1),
+                  text: "",
+                  forceMoveMarkers: false
+                }
+            ]);
+            yield
+            editor.setSelection(sel);
+            editor.setPosition(pos);
+            yield;
         }
-    });
+    }
+};
 
 const getDiagnostics = async (uri : monaco.Uri) : Promise<Array<Diag>> => {
     const client = await getClient(uri);
@@ -237,7 +253,7 @@ const runModule =
                 tag: "run",
                 val: withGtLib(mod, async () => {
                     for (const m of relevant) {
-                        amdRequire.undef(m.path);
+                        requirejs.undef(m.path);
                     }
                     try {
                         await updateJs(pageNs, relevant);
@@ -455,7 +471,7 @@ export const init = (config : Config) => {
     manageFocusOutlines(document, "visible-focus-outline");
     const editToggle = document.querySelector(".gt-edit-toggle");
     let modules : Modules | undefined;
-    if (window.localStorage.getItem("gt-edit-toggle-on")) {
+    if (localStorage.getItem("gt-edit-toggle-on")) {
         requestIdleCallback(() => {
             modules = initEditors(config);
             if (editToggle) {
@@ -468,7 +484,7 @@ export const init = (config : Config) => {
         editToggle.addEventListener("click", () => {
             if (editToggle.classList.contains("gt-edit-toggle-on")) {
                 editToggle.classList.remove("gt-edit-toggle-on");
-                window.localStorage.removeItem("gt-edit-toggle-on");
+                localStorage.removeItem("gt-edit-toggle-on");
                 window.location.reload();
             }
             else {
@@ -478,7 +494,7 @@ export const init = (config : Config) => {
                     requestAnimationFrame(() => {
                         editIcon.classList.remove("gt-run-spinner");
                         editToggle.classList.add("gt-edit-toggle-on");
-                        window.localStorage.setItem("gt-edit-toggle-on", "1");
+                        localStorage.setItem("gt-edit-toggle-on", "1");
                     });
                 });
             }

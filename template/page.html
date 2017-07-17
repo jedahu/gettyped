@@ -8,19 +8,6 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono|Open+Sans"/>
         <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
         <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
-        <script>
-         require.config({
-             baseUrl: "$site-root$/modules",
-             paths: {vs: "https://unpkg.com/monaco-editor@0.9.0/min/vs"},
-             waitSeconds: 0
-         });
-         window.MonacoEnvironment = {
-             getWorkerUrl: function(workerId, label) {
-                 return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
-             }
-         };
-        </script>
         <script src="$site-root$/$main-js$"></script>
     </head>
     <body class="language-typescript">

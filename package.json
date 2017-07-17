@@ -1,6 +1,9 @@
 {
     "dependencies": {
+        "@types/requirejs": "^2.1.29",
         "@types/source-map": "^0.5.0",
+        "requestidlecallback": "^0.3.0",
+        "requirejs": "^2.3.3",
         "source-map": "^0.5.6"
     },
     "devDependencies": {

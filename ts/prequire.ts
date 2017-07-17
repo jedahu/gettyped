@@ -1,13 +1,11 @@
-import {amdRequire} from "./amd";
-
 const resetRequireError = () => {
-    amdRequire.onError = (e : any) => { throw e; };
+    requirejs.onError = (e : any) => { throw e; };
 };
 
 export const prequire = async (paths : Array<string>) : Promise<any> =>
     new Promise((res, rej) => {
-        amdRequire.onError = rej;
-        amdRequire(
+        requirejs.onError = rej;
+        requirejs(
             paths,
             function() {
                 res([].slice.call(arguments));

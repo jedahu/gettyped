@@ -8,6 +8,8 @@
             "dom",
             "dom.iterable"
         ],
+        "typeRoots": ["./d"],
+        "types": ["requirejs"],
         "allowJs": true,
         "module": "amd",
         "outFile": "../built.js"

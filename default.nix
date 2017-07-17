@@ -80,6 +80,7 @@ rec {
     name = "compile-js";
     src = unpack-tree [
       ["cp" ./ts "ts"]
+      ["cp" ./js "js"]
       ["ln" ./tsconfig-base.json "tsconfig-base.json"]
       ["ln" ./webpack.config.ts "webpack.config.ts"]
       ["cp" (node-deps + "/node_modules") "node_modules"]
@@ -95,7 +96,11 @@ rec {
           --config ./webpack.config.ts \
           --output-path . \
           --output-filename main.js || exit 1
-      cat "${config-js}" "main.js" >"$mainjs" || exit 1
+      cat "${config-js}" \
+          "node_modules/requirejs/require.js" \
+          "js/page-config.js" \
+          "main.js" \
+          >"$mainjs" || exit 1
     '';
   };
   page-html = path: absPath: pkgs.stdenv.mkDerivation rec {

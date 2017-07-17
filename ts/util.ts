@@ -32,3 +32,14 @@ export const lastSegment = (path : string) : string => {
     const segs = path.split("/");
     return segs[segs.length - 1];
 };
+
+export const inIdleTime = (task : Iterator<void>) : void =>
+    requestIdleCallback(deadline => {
+        let done = false;
+        while (deadline.timeRemaining() > 0 && !done) {
+            done = task.next().done;
+        }
+        if (!done) {
+            inIdleTime(task);
+        }
+    });

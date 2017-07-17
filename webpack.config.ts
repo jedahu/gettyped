@@ -7,7 +7,10 @@ const DEV = process.env.NODE_ENV = "development";
 
 module.exports = {
     entry: {
-        main: "./ts/index.ts",
+        main: [
+            "requestidlecallback",
+            "./ts/index.ts"
+        ]
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js']

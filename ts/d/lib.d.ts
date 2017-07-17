@@ -18,7 +18,13 @@ declare module "vs/language/typescript/lib/typescriptServices" {
     export = x;
 }
 
+type RequestIdleCallbackFn =
+    (f : (deadline : {timeRemaining() : number}) => void) => void;
+
 declare interface Window {
-    requirejs : any;
-    define : any;
+    requirejs : Require;
+    define : RequireDefine;
+    requestIdleCallback : RequestIdleCallbackFn;
 }
+
+declare const requestIdleCallback : RequestIdleCallbackFn;
