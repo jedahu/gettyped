@@ -222,7 +222,6 @@ rec {
     buildPhase = ''
       mkdir -p "$out/modules"
       ln -s "${./static}" "$out/static"
-      ln -s "${node-deps}/node_modules/monaco-editor/min/vs" "$out/vs"
       ln -s "${./css/main.css}" "$out/main.css"
       ln -s "${libs-d-ts}" "$out/libs.d.ts"
       ln -s "${compile-js}/${main-js}" "$out/${main-js}"
