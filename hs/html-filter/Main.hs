@@ -49,18 +49,16 @@ hasClass name tree = fromMaybe False val
 
 convert :: TagTree Text -> [TagTree Text]
 convert t@(TagBranch "pre" attrs0 children) =
-  maybe
-  [t]
-  (\mod -> [convertRundocBlock mod attrs children])
-  (if hasClass "rundoc-block" t
-    then M.lookup "rundoc-module" attrs
-    else Nothing)
+  case (M.lookup "rundoc-language" attrs, M.lookup "rundoc-module" attrs) of
+    (Just "ts", Just m) -> [convertModule m attrs children]
+    (Just "check", _)   -> []
+    (_, _)              -> [t]
   where
     attrs = M.fromList attrs0
 convert t = [t]
 
-convertRundocBlock :: Text -> M.Map Text Text -> [TagTree Text] -> TagTree Text
-convertRundocBlock mod attrs children =
+convertModule :: Text -> M.Map Text Text -> [TagTree Text] -> TagTree Text
+convertModule mod attrs children =
   TagBranch
   "details"
   [ ("open", if hide then "" else "open")

@@ -1,31 +1,43 @@
-#+DATE: [2017-07-16 Sun]
+#+DATE: [2017-07-17 Mon]
 
-* TODO rename 'why' path
-* TODO refined types and smart constructors
-* TODO sum types and static exhaustiveness checks
-* TODO taming the null pointer
-* TODO safe escaped strings
-* TODO safe show strings (shows`foo ${3} bar`)
-* TODO global and local configuration, statically ensured
-* TODO static dependency injection
-* TODO statically checked roles/permissions
-* TODO statically checked resource access
-* TODO statically scoped resource lifetimes
-* TODO statically restricted effects
-* TODO deep immutable updates
-* TODO statically calculated partial record fetch
-
-* TODO gt-lib page
-* TODO output jank on replay
-* TODO output text size vs body text size
-* TODO module section bottom margin
-* TODO module section border color
-* TODO body bottom padding
-* TODO toc heading and styling
-* TODO home page link
-* TODO test in firefox
-* TODO test in edge
+* Content
+** TODO gt-lib page
+** TODO refined types and smart constructors
+** TODO sum types and static exhaustiveness checks
+** TODO taming the null pointer
+** TODO safe escaped strings
+** TODO safe show strings (shows`foo ${3} bar`)
+** TODO global and local configuration, statically ensured
+** TODO static dependency injection
+** TODO statically checked roles/permissions
+** TODO statically checked resource access
+** TODO statically scoped resource lifetimes
+** TODO statically restricted effects
+** TODO deep immutable updates
+** TODO statically calculated partial record fetch
 
 
-* TODO optional editor loading
-* TODO browser/device detection -> editor load default
+* Gen
+** TODO rename 'why' path
+** TODO page namespaced modules
+** TODO import of page namespaced modules
+** DONE output testing
+   CLOSED: [2017-07-17 Mon 12:09]
+
+* Smoke
+** TODO test in firefox
+** TODO test in edge
+
+
+* UI
+** TODO output jank on replay
+** TODO output text size vs body text size
+** TODO module section bottom margin
+** TODO module section border color
+** TODO body bottom padding
+** TODO toc heading and styling
+** TODO home page link
+
+* UX
+** TODO optional editor loading
+** TODO browser/device detection -> editor load default

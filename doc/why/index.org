@@ -1,7 +1,7 @@
 #+TITLE: Catch simple mistakes early
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-16 Sun]
+#+DATE: [2017-07-17 Mon]
 
 
 Here is an untyped implementation of a function that draws a square on a canvas
@@ -31,8 +31,17 @@ export const square0 : any = (size : any) : any => {
 
 export const run = () => {
     const data = square0(10);
-    $gt.log(data);
+    $gt.log("square", data);
 };
+#+END_SRC
+
+#+BEGIN_SRC check :module square0
+square: |
+  {
+    colour: _.isNumber,
+    translation: [_.isNumber, _.isNumber],
+    rotation: _.isNumber
+  }
 #+END_SRC
 
 Here is the same function, typed.
@@ -54,6 +63,15 @@ export const run = () => {
 };
 #+END_SRC
 
+#+BEGIN_SRC check :module square1
+square: |
+  {
+    colour: _.isNumber,
+    translation: [_.isNumber, _.isNumber],
+    rotation: _.isNumber
+  }
+#+END_SRC
+
 The rest of the page enumerates some mistakes that will manifest at runtime in
 an untyped program and at compile time in a typed program.
 
@@ -72,6 +90,15 @@ import {square0} from "square0";
 export const run = () => square0(25, "red");
 #+END_SRC
 
+#+BEGIN_SRC check :module wrong-arity0
+$result: |
+  {
+    colour: _.isNumber,
+    translation: [_.isNumber, _.isNumber],
+    rotation: _.isNumber
+  }
+#+END_SRC
+
 With types, the error is caught at compile time.
 #+BEGIN_SRC ts :module wrong-arity1 :error static
 import {square1} from "square1";
@@ -88,6 +115,15 @@ called with a single named options argument. It silently fails to draw.
 import {square0} from "square0";
 
 export const run = () => square0({size: 9});
+#+END_SRC
+
+#+BEGIN_SRC check :module bad-arguments0
+$result: |
+  {
+    color: _.isNumber,
+    translation: [_.isNumber, _.isNumber],
+    rotation: _.isNumber
+  }
 #+END_SRC
 
 With types, the error is caught at compile time.

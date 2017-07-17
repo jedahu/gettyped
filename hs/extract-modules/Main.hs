@@ -27,11 +27,14 @@ moduleQuery = query go
           file      = M.lookup "rundoc-file" attrs
           err       = errKind (M.lookup "rundoc-error" attrs)
           f         = ((,,) code) <$> file <*> Just err
-          m         = mkML code <$> module_ <*> lang <*> Just err
+          m         = mkML code <$> module_ <*> (suffix <$> lang) <*> Just err
       in maybe [] (:[]) (f <|> m)
     go _ = []
 
-    mkML c m l e = (c, m ++ "." ++ l, e)
+    mkML c m s e = (c, m ++ "." ++ s, e)
+
+    suffix "ts" = "ts"
+    suffix "check" = "ts.check"
 
     errKind (Just "runtime") = Runtime
     errKind (Just "static")  = Static
