@@ -12,6 +12,8 @@ type Handlers = {
     [K in keyof HTMLElementEventMap]?: (this : HTMLElement, evt : HTMLElementEventMap[K]) => void;
 };
 
+const dataPrefix = "gt";
+
 export const text = (s : string) : Text =>
     document.createTextNode(s);
 
@@ -30,7 +32,7 @@ export const html = (
         elem.setAttribute(k, v);
     }
     for (const [k, v] of Object.entries(data || {})) {
-        elem.dataset[k] = JSON.stringify(v);
+        elem.dataset[`${dataPrefix}${k}`] = JSON.stringify(v);
     }
     for (const [k, v] of Object.entries(handlers || {})) {
         elem.addEventListener(k, v);
@@ -50,10 +52,10 @@ export const html = (
 };
 
 export const data = (elem : HTMLElement) : {[k : string] : any} => {
-    const x : any = {};
+    const x : {[k : string] : any} = {};
     for (const [k, v] of Object.entries(elem.dataset)) {
-        if (v) {
-            x[k] = JSON.parse(v);
+        if (k.startsWith(dataPrefix) && v) {
+            x[k.substring(dataPrefix.length)] = JSON.parse(v);
         }
     }
     return x;

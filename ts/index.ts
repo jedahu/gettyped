@@ -1,5 +1,5 @@
 import {getTsOpts} from "./tsconfig";
-import {objMap, objValues, objEntries, arrayFlatMap} from "./util";
+import {objMap, objValues, objEntries, arrayFlatMap, unTs, lastSegment} from "./util";
 import {manageFocusOutlines} from "./focus-outline";
 import {withGtLib} from "./gt-lib";
 import * as monaco from "./monaco";
@@ -32,15 +32,17 @@ const getClient = async (uri : monaco.Uri) : Promise<ts.LanguageService> => {
     return await worker(uri);
 };
 
-const resizeEditor = ({editor, model, container} : Module) : void => {
-    window.requestAnimationFrame(() => {
-        const lh = editor.getConfiguration().lineHeight;
-        const lc = model.getLineCount();
-        const height = (lh * lc) + scrollbarSize;
-        container.style.height = `${height}px`;
-        editor.layout();
-    });
-};
+const resizeEditor =
+    (m : Pick<Module, "editor" | "model" | "container">) : void => {
+        const {editor, model, container} = m;
+        window.requestAnimationFrame(() => {
+            const lh = editor.getConfiguration().lineHeight;
+            const lc = model.getLineCount();
+            const height = (lh * lc) + scrollbarSize;
+            container.style.height = `${height}px`;
+            editor.layout();
+        });
+    };
 
 const resizeEditors = (mods : Modules) : void => {
     for (const m of objValues(mods)) {
@@ -49,16 +51,14 @@ const resizeEditors = (mods : Modules) : void => {
     };
 };
 
+const getModule = (key : string, modules : Modules) : Module =>
+    modules[unTs(lastSegment(key))];
+
 const importedPaths =
     (mod : Module) : Array<string> =>
     tss.preProcessFile(mod.model.getValue(), true, false).
     importedFiles.
-    map(f => {
-        const fn = f.fileName;
-        return fn.startsWith("./")
-            ? fn.slice(2)
-            : fn;
-    });
+    map(f => f.fileName);
 
 const updateImports = (mod : Module) : void =>
     requestIdleCallback(() => {
@@ -67,7 +67,7 @@ const updateImports = (mod : Module) : void =>
 
 const importedModules =
     (mod : Module, modules : Modules) : Array<Module> =>
-    importedPaths(mod).map(p => modules[p]);
+    importedPaths(mod).map(p => getModule(p, modules));
 
 const transitivelyImportedModules =
     (mod : Module, modules : Modules) : Array<Module> => {
@@ -113,6 +113,12 @@ const dependentModules =
 //         go(path);
 //         return deps;
 //     };
+
+const stopModuleSpinner = ({section} : {section : HTMLElement}) => {
+    const spinner =
+        section.getElementsByClassName("gt-editor-load-spinner")[0];
+    spinner.classList.remove("gt-do-spin");
+};
 
 const refreshDependentModules = (path : string, mods : Modules) =>
     requestIdleCallback(() => {
@@ -160,6 +166,12 @@ const getDiagnosticsMap =
         return dmap;
     };
 
+// const getJs = async (m : Module) : Promise<string> => {
+//     const client = await getClient(m.uri);
+//     const emitted = await client.getEmitOutput(m.uri.tostring());
+//     return emitted.outputFiles[0].text;
+// };
+
 const updateJs =
     (pageNs : string, modules : Array<Module>) : Promise<void> =>
     Promise.all(
@@ -170,7 +182,7 @@ const updateJs =
                 outputFiles[0].
                 text.
                 replace(/^define\(/, `define('${pageNs}/${m.path}',`) +
-                `\n//# sourceURL=${m.path}.ts`;
+                `\n//# sourceURL=${pageNs}/${m.path}.ts`;
         })).then(_ => {});
 
 const diagnosticMessage = (diag : ts.Diagnostic) : string => {
@@ -205,7 +217,7 @@ const runModule =
                         diags.map(d => {
                             const pos =
                                 d.start != undefined
-                                ? modules[path].model.getPositionAt(d.start)
+                                ? getModule(path, modules).model.getPositionAt(d.start)
                                 : undefined;
                             const position =
                                 pos
@@ -229,9 +241,10 @@ const runModule =
                     }
                     try {
                         await updateJs(pageNs, relevant);
+                        // const src = getJs(mod);
                         for (const m of relevant) {
-                            new Function(m.js)();
-                            //eval(m.js);
+                            // new Function(m.js)();
+                            eval(m.js);
                         }
                         const [m] = await prequire([`${pageNs}/${mod.path}`]);
                         const ret =
@@ -282,7 +295,7 @@ const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
         if (entry instanceof HTMLElement) {
             const {path, line, column} = data(entry);
             if (isFinite(line) && isFinite(column)) {
-                const m = ms[path];
+                const m = getModule(path, ms);
                 m.editor.setPosition({lineNumber: line, column});
                 m.editor.focus();
             }
@@ -306,6 +319,8 @@ export const init =
             ...opts,
             noEmit: false,
             baseUrl: "/",
+            // outFile: "out.js",
+            noEmitHelpers: true,
             typeRoots: [],
             allowNonTsExtensions: false,
             inlineSourceMap: true,
@@ -319,7 +334,12 @@ export const init =
             noSemanticValidation: false,
             noSyntaxValidation: false
         });
-
+        monaco.editor.defineTheme("lighter-default", {
+            base: "vs",
+            inherit: true,
+            colors: {},
+            rules: [{token: "", foreground: "444444"}]
+        });
         for (const p of libs_d_ts()) {
             p.then(({name, content}) => {
                 mts.typescriptDefaults.addExtraLib(content, name);
@@ -328,33 +348,47 @@ export const init =
 
         const modules : Modules =
             objMap<Module>(
-                sections.
-                    filter(
-                        (sec : HTMLElement) => {
-                            const sel = sec.getElementsByClassName("rundoc-block")[0];
-                            return sel.getAttribute("rundoc-language") === "ts" &&
-                                sel.getAttribute("rundoc-module");
-                        }).
-                    map((sec : HTMLElement) => {
+                arrayFlatMap(
+                    sections,
+                    (sec : HTMLElement) : Array<[string, Module]> => {
                         const sel = sec.getElementsByClassName("rundoc-block")[0] as HTMLElement;
+                        const name = sel.getAttribute("rundoc-module");
+                        const lang = sel.getAttribute("rundoc-language");
+                        if (!(lang === "ts" && name)) {
+                            return [];
+                        }
                         const text = sel.innerText.trim();
                         sel.textContent = "";
-                        const path = sel.getAttribute("rundoc-module");
+                        const path = `${config.pageNs}/${name}`;
                         const uri = monaco.Uri.parse(`/${path}.ts`);
                         const model = monaco.editor.createModel("", "typescript", uri);
+                        const isStatic = sel.getAttribute("rundoc-static");
                         const editor : Editor =
                             monaco.editor.create(sel, {
                                 model,
                                 lineNumbers: "off",
+                                fontFamily: "Droid Sans Mono",
+                                fontSize: 13,
+                                theme: "lighter-default",
                                 scrollBeyondLastLine: false,
+                                overviewRulerBorder: false,
+                                dragAndDrop: true,
+                                renderLineHighlight: "none",
                                 minimap: {
                                     enabled: false
                                 },
                                 scrollbar: {
                                     vertical: "hidden",
                                     horizontalScrollbarSize: scrollbarSize
-                                }
+                                },
+                                readOnly: !!isStatic
                             });
+                        if (!!isStatic) {
+                            model.setValue(text);
+                            stopModuleSpinner({section: sec});
+                            resizeEditor({editor, model, container: sel});
+                            return [];
+                        }
                         const toolbar = sec.getElementsByClassName('gt-module-tools')[0];
                         const runButton =
                             h("button",
@@ -377,8 +411,9 @@ export const init =
                               },
                               ["clear"]);
                         toolbar.appendChild(clearButton);
-                        const output = sec.getElementsByClassName("gt-module-output")[0];
-                        return [path, {
+                        const output = sec.getElementsByClassName("gt-module-output")[0] as HTMLElement;
+                        return [[name, {
+                            name,
                             editor,
                             originalText: text,
                             section: sec,
@@ -392,7 +427,7 @@ export const init =
                             output,
                             imports: [],
                             js: ""
-                        }];
+                        }]];
                     }));
 
         for (const m of objValues(modules)) {
@@ -402,9 +437,7 @@ export const init =
             m.revertButton.addEventListener("click", () => revertModule(m, modules));
             m.output.addEventListener("click", handleOutputClick(modules));
             m.clearButton.addEventListener("click", () => clearOutput(m));
-            const spinner =
-                m.section.getElementsByClassName("gt-editor-load-spinner")[0];
-            spinner.classList.remove("gt-do-spin");
+            stopModuleSpinner(m);
         }
 
         window.addEventListener("resize", () => resizeEditors(modules));

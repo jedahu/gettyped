@@ -22,13 +22,18 @@ moduleQuery = query go
   where
     go (CodeBlock (ident0, classes, attrs0) code) =
       let attrs     = M.fromList attrs0
-          lang      = M.lookup "rundoc-language" attrs
-          module_   = M.lookup "rundoc-module" attrs
-          file      = M.lookup "rundoc-file" attrs
-          err       = errKind (M.lookup "rundoc-error" attrs)
-          f         = ((,,) code) <$> file <*> Just err
-          m         = mkML code <$> module_ <*> (suffix <$> lang) <*> Just err
-      in maybe [] (:[]) (f <|> m)
+          isStatic  = M.member "rundoc-static" attrs
+      in
+        if isStatic
+        then []
+        else
+          let lang      = M.lookup "rundoc-language" attrs
+              module_   = M.lookup "rundoc-module" attrs
+              file      = M.lookup "rundoc-file" attrs
+              err       = errKind (M.lookup "rundoc-error" attrs)
+              f         = ((,,) code) <$> file <*> Just err
+              m         = mkML code <$> module_ <*> (suffix <$> lang) <*> Just err
+          in maybe [] (:[]) (f <|> m)
     go _ = []
 
     mkML c m s e = (c, m ++ "." ++ s, e)

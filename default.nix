@@ -98,24 +98,23 @@ rec {
       cat "${config-js}" "main.js" >"$mainjs" || exit 1
     '';
   };
-  page-html = path: absPath:
-    let template = ./template/page.html;
-    in pkgs.stdenv.mkDerivation {
+  page-html = path: absPath: pkgs.stdenv.mkDerivation rec {
     name = "gettyped-page-html";
     phases = "buildPhase";
     buildInputs = [pandoc html-filter];
+    page-ns = baseNameOf (dirOf absPath);
     buildPhase = ''
       mkdir -p "$out${path}"
       pandoc -f org -t html5 --smart \
         -V site-root=${config.siteRoot} \
         -V main-js=${main-js} \
-        -V page-ns=${baseNameOf (dirOf absPath)} \
+        -V page-ns=${page-ns} \
         --parse-raw \
         --no-highlight \
         --section-divs \
-        --toc \
+        ${if page-ns == "doc" then "\\" else "--toc \\"}
         --standalone \
-        --template "${template}" \
+        --template "${./template/page.html}" \
         "${absPath}" \
         | html-filter >"$out${path}/index.html"
   '';

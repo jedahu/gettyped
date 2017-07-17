@@ -1,7 +1,8 @@
-#+DATE: [2017-07-17 Mon]
+#+DATE: [2017-07-18 Tue]
 
 * Content
-** TODO gt-lib page
+** DONE gt-lib page
+   CLOSED: [2017-07-18 Tue 02:03]
 ** TODO refined types and smart constructors
 ** TODO sum types and static exhaustiveness checks
 ** TODO taming the null pointer
@@ -32,13 +33,20 @@
 
 
 * UI
-** TODO output jank on replay
-** TODO output text size vs body text size
-** TODO module section bottom margin
-** TODO module section border color
-** TODO body bottom padding
-** TODO toc heading and styling
-** TODO home page link
+** DONE output jank on replay
+   CLOSED: [2017-07-17 Mon 22:15]
+** DONE output text size vs body text size
+   CLOSED: [2017-07-17 Mon 23:45]
+** DONE module section bottom margin
+   CLOSED: [2017-07-17 Mon 23:45]
+** DONE module section border color
+   CLOSED: [2017-07-17 Mon 23:45]
+** DONE body bottom padding
+   CLOSED: [2017-07-17 Mon 23:46]
+** DONE toc heading and styling
+   CLOSED: [2017-07-18 Tue 00:21]
+** DONE home page link
+   CLOSED: [2017-07-18 Tue 00:58]
 
 * UX
 ** TODO optional editor loading

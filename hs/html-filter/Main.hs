@@ -68,6 +68,7 @@ convertModule mod attrs children =
   [head, rest]
   where
     hide = M.member "rundoc-hide" attrs
+    static = M.member "rundoc-static" attrs
     ident = M.lookup "id" attrs
     codeId = fromMaybe ("gt-module:" <> mod) ident
     head = summary mod
@@ -84,4 +85,4 @@ convertModule mod attrs children =
                   ]
                 ]
     code = TagBranch "pre" (M.toList attrs) children
-    rest = TagBranch "div" [] [code, tools, output]
+    rest = TagBranch "div" [] (code : (if static then [] else [tools, output]))

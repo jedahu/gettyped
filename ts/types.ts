@@ -4,6 +4,7 @@ export type Model = monaco.editor.IModel;
 export type Module = {
     editor : Editor;
     model : Model;
+    name : string;
     path : string;
     uri : monaco.Uri;
     imports : Array<string>;

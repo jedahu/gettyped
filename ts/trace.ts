@@ -1,7 +1,7 @@
 import {SourceMapConsumer} from "source-map";
 import {Module, Modules} from "./types";
 import {html as h} from "./dom";
-import {arrayFlatMap, unTs} from "./util";
+import {arrayFlatMap, lastSegment, unTs} from "./util";
 import {siteRoot} from "./config";
 
 type TraceInfo = {
@@ -53,10 +53,11 @@ type SLC = {
 };
 
 const lineSpan = ({source, line, column} : SLC, name : string) : HTMLElement =>
+    // source map columns start at 0, monaco's at 1
     h("span",
       {class: "gt-trace-line gt-log-goto"},
-      [`    at ${name} (${source}:${line}:${column})\n`],
-      {data: {path: unTs(source), line, column}});
+      [`    at ${name} (${source}:${line}:${column + 1})\n`],
+      {data: {path: unTs(source), line, column: column + 1}});
 
 const lineSpan0 = (text : string) : HTMLElement =>
     h("span",
@@ -103,7 +104,7 @@ export const mapStackTrace = (trace : string, modules : Modules) : Array<HTMLEle
                 }
                 const line = parseInt(ln, 10);
                 const column = parseInt(cn, 10);
-                const m = modules[unTs(uri)];
+                const m = modules[unTs(lastSegment(uri))];
                 const name = getName(x) || "(unknown)";
                 return [renderLine(uri, line, column, name, m ? getSourceMap(m) : undefined)];
             }

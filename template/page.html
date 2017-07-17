@@ -1,62 +1,73 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
-    <title>$title$</title>
-    <link rel="stylesheet" href="$site-root$/main.css"/>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
-    <script>
-     require.config({
-         baseUrl: "$site-root$/modules",
-         paths: {vs: "https://unpkg.com/monaco-editor@0.9.0/min/vs"},
-         waitSeconds: 0
-     });
-     window.MonacoEnvironment = {
-         getWorkerUrl: function(workerId, label) {
-             return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
-         }
-     };
-    </script>
-    <script src="$site-root$/$main-js$"></script>
-  </head>
-  <body>
-    <article>
+    <head>
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+        <title>$title$</title>
+        <link rel="stylesheet" href="$site-root$/main.css"/>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono|Open+Sans"/>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
+        <script>
+         require.config({
+             baseUrl: "$site-root$/modules",
+             paths: {vs: "https://unpkg.com/monaco-editor@0.9.0/min/vs"},
+             waitSeconds: 0
+         });
+         window.MonacoEnvironment = {
+             getWorkerUrl: function(workerId, label) {
+                 return '$site-root$/static/monaco-editor-worker-loader-proxy.js';
+             }
+         };
+        </script>
+        <script src="$site-root$/$main-js$"></script>
+    </head>
+    <body>
         <header>
-            <h1 class="gt-page-title">$title$</h1>
-            <dl class="gt-provenance">
-                $if(date-meta)$
-                <dt>date</dt><dd>$date-meta$</dd>
-                $endif$
-                $if(keywords)$
-                <dt>keywords</dt><dd>$for(keywords)$$keywords$$sep$, $endfor$</dd>
-                $endif$
-            </dl>
+            <h1><a href="$site-root$">Get <span>:</span> Typed</a></h1>
+            <h2>motivations for using types</h2>
         </header>
-        $if(toc)$
-        <nav id="gt-toc">
-            $toc$
-        </nav>
-        $endif$
-        <div id="gt-content">
+        <article>
+            <header>
+                <h1 class="gt-page-title">$title$</h1>
+                <dl class="gt-provenance">
+                    $if(date-meta)$
+                    <dt>date</dt><dd>$date-meta$</dd>
+                    $endif$
+                    $if(keywords)$
+                    <dt>keywords</dt><dd>$for(keywords)$$keywords$$sep$, $endfor$</dd>
+                    $endif$
+                </dl>
+            </header>
+            $if(toc)$
+            <nav id="gt-toc" class="gt-toc">
+                <details>
+                    <summary>TOC <i class="material-icons md-24 md-dark"></i></summary>
+                    $toc$
+                </details>
+            </nav>
+            $endif$
+            <div id="gt-content">
 $body$
-        </div>
-    </article>
-    <script>
-     (function() {
-        const sections =
-            [].slice.call(document.getElementsByClassName("gt-module-section"));
-        for (const sec of sections) {
-            const spinner =
-                sec.getElementsByClassName("gt-editor-load-spinner")[0];
-            spinner.classList.add("gt-do-spin");
-            spinner.setAttribute("title", "Loading monaco editor");
-        }
-        const config = {
-            pageNs: "$page-ns$"
-        };
-        require(["GetTyped"], function(m) { m.init(config); });
-     })();
-    </script>
-  </body>
+            </div>
+        </article>
+        <nav>
+            <div class="gt-more-link"><a href="$site-root$">more motivations</a></div>
+        </nav>
+        <script>
+         (function() {
+             const sections =
+                 [].slice.call(document.getElementsByClassName("gt-module-section"));
+             for (const sec of sections) {
+                 const spinner =
+                     sec.getElementsByClassName("gt-editor-load-spinner")[0];
+                 spinner.classList.add("gt-do-spin");
+                 spinner.setAttribute("title", "Loading monaco editor");
+             }
+             const config = {
+                 pageNs: "$page-ns$"
+             };
+             require(["GetTyped"], function(m) { m.init(config); });
+         })();
+        </script>
+    </body>
 </html>

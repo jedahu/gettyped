@@ -27,3 +27,8 @@ export const assertNever = (a : never) : never => {
 
 export const unTs = (path : string) : string =>
     path.endsWith(".ts") ? path.slice(0, path.length - 3) : path;
+
+export const lastSegment = (path : string) : string => {
+    const segs = path.split("/");
+    return segs[segs.length - 1];
+};

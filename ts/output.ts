@@ -1,12 +1,12 @@
 import {DiagInfo, Module, Modules, RunRet} from "./types";
 import {html as h, text as t} from "./dom";
-import {assertNever} from "./util";
+import {assertNever, arrayFlatMap} from "./util";
 import {mapStackTrace} from "./trace";
 
 const unnamedTypes = [Object, String, Number, RegExp, Date];
 
-const stringify = (x : any) : Node =>
-    typeof x === "string"
+const stringify = (x : any, asJson : boolean = false) : Node =>
+    typeof x === "string" && !asJson
     ? document.createTextNode(x)
     : typeof x === "undefined"
     ? h("span", {class: "gt-log-special"}, ["undefined"])
@@ -35,12 +35,14 @@ const writeToOutput =
     (m : Module) =>
     (tag : LogTag) =>
     (html : Array<Node>, data? : {[k : string] : any}) => {
+        m.output.classList.remove("gt-do-close");
+        m.output.style.height = "auto";
         const entry =
             h("li",
               {class: `gt-log-entry gt-log-entry-${tag}`},
               [ h("span",
                   {class: "gt-log-tag"},
-                  [logTagInfo(tag)]),
+                  [logTagInfo(tag), " "]),
                 ...html
               ],
               {data});
@@ -49,8 +51,12 @@ const writeToOutput =
 
 export const writeLog = (m : Module) => (...xs : Array<any>) =>
     writeToOutput(m)("log")(
-        xs.map(
-            x => h("span", {class: "gt-log-item"}, [stringify(x)])));
+        arrayFlatMap(
+            xs,
+            x => [
+                h("span", {class: "gt-log-item"}, [stringify(x)]),
+                t(" ")
+            ]));
 
 export const writeDiag = (m : Module) => (diag : DiagInfo) => {
     const {line, column} =
@@ -106,7 +112,7 @@ export const writeRuntime = (m : Module, ms : Modules) => (err : any) => {
 
 export const writeRet = (m : Module) => (x : any) =>
     writeToOutput(m)("result")([
-        h("span", {class: "gt-log-result"}, [stringify(x)])
+        h("span", {class: "gt-log-result"}, [stringify(x, true)])
     ]);
 
 export const writeNote = (m : Module) => (s : string) =>
@@ -148,5 +154,13 @@ export const writeResult = async (m : Module, ms : Modules, x : RunRet) => {
 }
 
 export const clearOutput = (m : Module) => {
-    m.output.innerHTML = "";
+    m.output.style.height = `${m.output.offsetHeight}px`;
+    m.output.innerText = "";
+    // const children = [].slice.call(m.output.childNodes);
+    setTimeout(() => m.output.classList.add("gt-do-close"));
+    // setTimeout(() => {
+    //     for (const c of children) {
+    //         c.remove();
+    //     }
+    // }, 300);
 };

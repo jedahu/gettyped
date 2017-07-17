@@ -1,0 +1,80 @@
+#+TITLE: GT lib
+#+AUTHOR: Jeremy Hughes
+#+EMAIL: jedahu@gmail.com
+#+DATE: [2017-07-18 Tue]
+
+
+The =$gt= value is globally available and has a few utility functions on it for
+asserting, logging, generating random numbers, and drawing to a canvas which
+appears in the output log.
+
+#+BEGIN_SRC ts :module gt-lib :static t
+declare type $GT = {
+    assert : (x : boolean, msg? : string) => void;
+    assertp : (p : Promise<boolean>, msg? : string) => Promise<void>;
+    log : (...xs : Array<any>) => void;
+    randomFloat : (min : number, max : number) => number;
+    randomInt : (min : number, max : number) => number;
+    canvas : (
+        size : number | [number, number],
+        f : (ctx : CanvasRenderingContext2D) => void
+    ) => void;
+};
+
+declare const $gt : $GT;
+#+END_SRC
+
+
+Here be demos.
+
+#+BEGIN_SRC ts :module logging
+export const run = () => {
+    $gt.log("randoms", {
+        int: $gt.randomInt(1, 10),
+        float: $gt.randomFloat(3.3, 9.9)
+    });
+    $gt.log("canvas...");
+    return "there you go";
+};
+#+END_SRC
+
+#+BEGIN_SRC check :module logging
+randoms: |
+  {int: _.isNumber, float: _.isNumber}
+$result: |
+  _.isString
+#+END_SRC
+
+#+BEGIN_SRC ts :module canvas
+export const run = () => {
+    $gt.canvas(70, ctx => {
+        ctx.strokeStyle = "red";
+        ctx.strokeRect(10, 20, 30, 40);
+    });
+    $gt.canvas(30, ctx => {
+        ctx.fillStyle = "green";
+        ctx.fillRect(10, 10, 10, 10);
+    });
+};
+#+END_SRC
+
+#+BEGIN_SRC ts :module promises
+export const run = () => {
+    $gt.log("waiting...");
+    return new Promise(res => {
+        setTimeout(() => res("delayed result"), 4000);
+    });
+};
+#+END_SRC
+
+#+BEGIN_SRC ts :module assertions :error runtime
+const promise : Promise<boolean> = new Promise(res => {
+    setTimeout(() => res((10/3)+1-1 === 10/3), 1000);
+});
+
+export const run = async () => {
+    $gt.assert(1 + 1 === 2, "maths is broken");
+    await $gt.assertp(promise, "IEEE!");
+    return "not reached";
+};
+#+END_SRC

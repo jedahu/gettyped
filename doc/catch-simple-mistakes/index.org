@@ -1,7 +1,7 @@
 #+TITLE: Catch simple mistakes early
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-17 Mon]
+#+DATE: [2017-07-18 Tue]
 
 
 Here is an untyped implementation of a function that draws a square on a canvas
