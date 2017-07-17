@@ -6,6 +6,8 @@
         <link rel="stylesheet" href="$site-root$/main.css"/>
         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono|Open+Sans"/>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
+        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.3/require.min.js"></script>
         <script>
          require.config({
@@ -21,10 +23,16 @@
         </script>
         <script src="$site-root$/$main-js$"></script>
     </head>
-    <body>
+    <body class="language-typescript">
         <header>
             <h1><a href="$site-root$">Get <span>:</span> Typed</a></h1>
             <h2>motivations for using types</h2>
+            $if(is-post)$
+            <span class="gt-edit-toggle">
+                <span>edit<br/><span class="gt-toggle-state"></span></span>
+                <i class="material-icons md-24 md-dark"></i>
+            </span>
+            $endif$
         </header>
         <article>
             <header>
@@ -51,18 +59,14 @@ $body$
             </div>
         </article>
         <nav>
+            $if(is-post)$
             <div class="gt-more-link"><a href="$site-root$">more motivations</a></div>
+            $endif$
         </nav>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/typescript.min.js"></script>
         <script>
          (function() {
-             const sections =
-                 [].slice.call(document.getElementsByClassName("gt-module-section"));
-             for (const sec of sections) {
-                 const spinner =
-                     sec.getElementsByClassName("gt-editor-load-spinner")[0];
-                 spinner.classList.add("gt-do-spin");
-                 spinner.setAttribute("title", "Loading monaco editor");
-             }
+             hljs.initHighlightingOnLoad();
              const config = {
                  pageNs: "$page-ns$"
              };

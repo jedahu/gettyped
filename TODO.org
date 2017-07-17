@@ -49,5 +49,6 @@
    CLOSED: [2017-07-18 Tue 00:58]
 
 * UX
-** TODO optional editor loading
+** DONE optional editor loading
+   CLOSED: [2017-07-18 Tue 06:02]
 ** TODO browser/device detection -> editor load default

@@ -307,140 +307,181 @@ type Config = {
     pageNs: string;
 };
 
-export const init =
-    (config : Config) => {
-        manageFocusOutlines(document, "visible-focus-outline");
-        const sections =
-            [].slice.call(document.getElementsByClassName("gt-module-section"));
-        const opts = getTsOpts();
-        const m = monaco;
-        const mts = m.languages.typescript;
-        mts.typescriptDefaults.setCompilerOptions({
-            ...opts,
-            noEmit: false,
-            baseUrl: "/",
-            // outFile: "out.js",
-            noEmitHelpers: true,
-            typeRoots: [],
-            allowNonTsExtensions: false,
-            inlineSourceMap: true,
-            inlineSources: true,
-            noImplicitAny: true,
-            module: mts.ModuleKind.AMD,
-            jsx: undefined as any,
-            paths: undefined as any
+const initEditors = (config : Config) => {
+    const sections =
+        [].slice.call(document.getElementsByClassName("gt-module-section"));
+    for (const sec of sections) {
+        const spinner = sec.getElementsByClassName("gt-editor-load-spinner")[0];
+        spinner.classList.add("gt-do-spin");
+        spinner.setAttribute("title", "Loading monaco editor");
+    }
+    const opts = getTsOpts();
+    const m = monaco;
+    const mts = m.languages.typescript;
+    mts.typescriptDefaults.setCompilerOptions({
+        ...opts,
+        noEmit: false,
+        baseUrl: "/",
+        // outFile: "out.js",
+        noEmitHelpers: true,
+        typeRoots: [],
+        allowNonTsExtensions: false,
+        inlineSourceMap: true,
+        inlineSources: true,
+        noImplicitAny: true,
+        module: mts.ModuleKind.AMD,
+        jsx: undefined as any,
+        paths: undefined as any
+    });
+    mts.typescriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: false,
+        noSyntaxValidation: false
+    });
+    monaco.editor.defineTheme("lighter-default", {
+        base: "vs",
+        inherit: true,
+        colors: {
+            "editor.background": "#f0f0f0"
+        },
+        rules: [{token: "", foreground: "444444"}]
+    });
+    for (const p of libs_d_ts()) {
+        p.then(({name, content}) => {
+            mts.typescriptDefaults.addExtraLib(content, name);
         });
-        mts.typescriptDefaults.setDiagnosticsOptions({
-            noSemanticValidation: false,
-            noSyntaxValidation: false
-        });
-        monaco.editor.defineTheme("lighter-default", {
-            base: "vs",
-            inherit: true,
-            colors: {},
-            rules: [{token: "", foreground: "444444"}]
-        });
-        for (const p of libs_d_ts()) {
-            p.then(({name, content}) => {
-                mts.typescriptDefaults.addExtraLib(content, name);
-            });
-        }
+    }
 
-        const modules : Modules =
-            objMap<Module>(
-                arrayFlatMap(
-                    sections,
-                    (sec : HTMLElement) : Array<[string, Module]> => {
-                        const sel = sec.getElementsByClassName("rundoc-block")[0] as HTMLElement;
-                        const name = sel.getAttribute("rundoc-module");
-                        const lang = sel.getAttribute("rundoc-language");
-                        if (!(lang === "ts" && name)) {
-                            return [];
-                        }
-                        const text = sel.innerText.trim();
-                        sel.textContent = "";
-                        const path = `${config.pageNs}/${name}`;
-                        const uri = monaco.Uri.parse(`/${path}.ts`);
-                        const model = monaco.editor.createModel("", "typescript", uri);
-                        const isStatic = sel.getAttribute("rundoc-static");
-                        const editor : Editor =
-                            monaco.editor.create(sel, {
-                                model,
-                                lineNumbers: "off",
-                                fontFamily: "Droid Sans Mono",
-                                fontSize: 13,
-                                theme: "lighter-default",
-                                scrollBeyondLastLine: false,
-                                overviewRulerBorder: false,
-                                dragAndDrop: true,
-                                renderLineHighlight: "none",
-                                minimap: {
-                                    enabled: false
-                                },
-                                scrollbar: {
-                                    vertical: "hidden",
-                                    horizontalScrollbarSize: scrollbarSize
-                                },
-                                readOnly: !!isStatic
-                            });
-                        if (!!isStatic) {
-                            model.setValue(text);
-                            stopModuleSpinner({section: sec});
-                            resizeEditor({editor, model, container: sel});
-                            return [];
-                        }
-                        const toolbar = sec.getElementsByClassName('gt-module-tools')[0];
-                        const runButton =
-                            h("button",
-                              { class: "gt-action-run material-icons md-24 md-dark",
-                                title: "Run"
-                              },
-                              ["play_circle_filled"]);
-                        toolbar.appendChild(runButton);
-                        const revertButton =
-                            h("button",
-                              { class: "gt-action-revert material-icons md-24 md-dark",
-                                title: "Revert code"
-                              },
-                              ["restore"]);
-                        toolbar.appendChild(revertButton);
-                        const clearButton =
-                            h("button",
-                              { class: "gt-action-clear material-icons md-24 md-dark",
-                                title: "Clear output"
-                              },
-                              ["clear"]);
-                        toolbar.appendChild(clearButton);
-                        const output = sec.getElementsByClassName("gt-module-output")[0] as HTMLElement;
-                        return [[name, {
-                            name,
-                            editor,
-                            originalText: text,
-                            section: sec,
-                            container: sel,
+    const modules : Modules =
+        objMap<Module>(
+            arrayFlatMap(
+                sections,
+                (sec : HTMLElement) : Array<[string, Module]> => {
+                    const sel = sec.getElementsByClassName("rundoc-block")[0] as HTMLElement;
+                    const name = sel.getAttribute("rundoc-module");
+                    const lang = sel.getAttribute("rundoc-language");
+                    if (!(lang === "ts" && name)) {
+                        return [];
+                    }
+                    const text = sel.innerText.trim();
+                    sel.textContent = "";
+                    const path = `${config.pageNs}/${name}`;
+                    const uri = monaco.Uri.parse(`/${path}.ts`);
+                    const model = monaco.editor.createModel("", "typescript", uri);
+                    const isStatic = sel.getAttribute("rundoc-static");
+                    const editor : Editor =
+                        monaco.editor.create(sel, {
                             model,
-                            path,
-                            uri,
-                            runButton,
-                            revertButton,
-                            clearButton,
-                            output,
-                            imports: [],
-                            js: ""
-                        }]];
-                    }));
+                            lineNumbers: "off",
+                            fontFamily: "Droid Sans Mono",
+                            fontSize: 13,
+                            theme: "lighter-default",
+                            scrollBeyondLastLine: false,
+                            overviewRulerBorder: false,
+                            dragAndDrop: true,
+                            renderLineHighlight: "none",
+                            minimap: {
+                                enabled: false
+                            },
+                            scrollbar: {
+                                vertical: "hidden",
+                                horizontalScrollbarSize: scrollbarSize
+                            },
+                            readOnly: !!isStatic
+                        });
+                    if (!!isStatic) {
+                        model.setValue(text);
+                        stopModuleSpinner({section: sec});
+                        resizeEditor({editor, model, container: sel});
+                        return [];
+                    }
+                    const toolbar = sec.getElementsByClassName('gt-module-tools')[0];
+                    const runButton =
+                        h("button",
+                          { class: "gt-action-run material-icons md-24 md-dark",
+                            title: "Run"
+                          },
+                          ["play_circle_filled"]);
+                    toolbar.appendChild(runButton);
+                    const revertButton =
+                        h("button",
+                          { class: "gt-action-revert material-icons md-24 md-dark",
+                            title: "Revert code"
+                          },
+                          ["restore"]);
+                    toolbar.appendChild(revertButton);
+                    const clearButton =
+                        h("button",
+                          { class: "gt-action-clear material-icons md-24 md-dark",
+                            title: "Clear output"
+                          },
+                          ["clear"]);
+                    toolbar.appendChild(clearButton);
+                    const output = sec.getElementsByClassName("gt-module-output")[0] as HTMLElement;
+                    return [[name, {
+                        name,
+                        editor,
+                        originalText: text,
+                        section: sec,
+                        container: sel,
+                        model,
+                        path,
+                        uri,
+                        runButton,
+                        revertButton,
+                        clearButton,
+                        output,
+                        imports: [],
+                        js: ""
+                    }]];
+                }));
 
-        for (const m of objValues(modules)) {
-            m.model.setValue(m.originalText);
-            m.model.onDidChangeContent(() => contentChangeHandler(m, modules));
-            m.runButton.addEventListener("click", () => runModuleDisplay(config, m, modules));
-            m.revertButton.addEventListener("click", () => revertModule(m, modules));
-            m.output.addEventListener("click", handleOutputClick(modules));
-            m.clearButton.addEventListener("click", () => clearOutput(m));
-            stopModuleSpinner(m);
-        }
+    for (const m of objValues(modules)) {
+        m.model.setValue(m.originalText);
+        m.model.onDidChangeContent(() => contentChangeHandler(m, modules));
+        m.runButton.addEventListener("click", () => runModuleDisplay(config, m, modules));
+        m.revertButton.addEventListener("click", () => revertModule(m, modules));
+        m.output.addEventListener("click", handleOutputClick(modules));
+        m.clearButton.addEventListener("click", () => clearOutput(m));
+        stopModuleSpinner(m);
+    }
 
-        window.addEventListener("resize", () => resizeEditors(modules));
+    window.addEventListener("resize", () => resizeEditors(modules));
 
-        resizeEditors(modules);
-    };
+    resizeEditors(modules);
+    return modules;
+};
+
+export const init = (config : Config) => {
+    manageFocusOutlines(document, "visible-focus-outline");
+    const editToggle = document.querySelector(".gt-edit-toggle");
+    let modules : Modules | undefined;
+    if (window.localStorage.getItem("gt-edit-toggle-on")) {
+        requestIdleCallback(() => {
+            modules = initEditors(config);
+            if (editToggle) {
+                editToggle.classList.add("gt-edit-toggle-on");
+            }
+        });
+    }
+    if (editToggle) {
+        const editIcon = editToggle.getElementsByTagName("i")[0];
+        editToggle.addEventListener("click", () => {
+            if (editToggle.classList.contains("gt-edit-toggle-on")) {
+                editToggle.classList.remove("gt-edit-toggle-on");
+                window.localStorage.removeItem("gt-edit-toggle-on");
+                window.location.reload();
+            }
+            else {
+                editIcon.classList.add("gt-run-spinner");
+                requestIdleCallback(() => {
+                    modules = initEditors(config);
+                    requestAnimationFrame(() => {
+                        editIcon.classList.remove("gt-run-spinner");
+                        editToggle.classList.add("gt-edit-toggle-on");
+                        window.localStorage.setItem("gt-edit-toggle-on", "1");
+                    });
+                });
+            }
+        });
+    }
+};

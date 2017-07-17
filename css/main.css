@@ -353,6 +353,10 @@ details > summary {
 
 /* * GetTyped */
 
+body > header {
+    position: relative;
+}
+
 body > header > h1 {
     padding: 0;
     margin: 0;
@@ -368,6 +372,38 @@ body > header > h2 {
     margin: 0;
     padding: 0;
     color: #b57233;
+}
+
+.gt-edit-toggle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    color: #d1d1d1;
+    cursor: pointer;
+}
+
+.gt-edit-toggle > span {
+    display: inline-block;
+    vertical-align: top;
+    font-family: 'Droid Sans Mono', monospace;
+    font-size: 11px;
+    line-height: 11px;
+}
+
+.gt-edit-toggle .gt-toggle-state::after {
+    content: 'off';
+}
+
+.gt-edit-toggle.gt-edit-toggle-on .gt-toggle-state::after {
+    content: 'on';
+}
+
+.gt-edit-toggle > i::after {
+    content: 'edit';
+}
+
+.gt-edit-toggle.gt-edit-toggle-on {
+    color: #c1c6e2;
 }
 
 body > nav > .gt-more-link {
@@ -445,6 +481,10 @@ details.gt-module-section > summary {
     font-size: 14px;
     color: #4255bd;
     width: 100%;
+}
+
+details.gt-module-section > div {
+    background-color: #f0f0f0;
 }
 
 button.material-icons {

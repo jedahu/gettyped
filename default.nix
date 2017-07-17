@@ -109,10 +109,13 @@ rec {
         -V site-root=${config.siteRoot} \
         -V main-js=${main-js} \
         -V page-ns=${page-ns} \
+        ${if page-ns == "doc" then "" else ''\
+          -V is-post=1 \
+          --toc \
+        ''} \
         --parse-raw \
         --no-highlight \
         --section-divs \
-        ${if page-ns == "doc" then "\\" else "--toc \\"}
         --standalone \
         --template "${./template/page.html}" \
         "${absPath}" \
