@@ -1,0 +1,13 @@
+{
+    "env": {
+        "es6": true,
+        "browser": true
+    },
+    "plugins": ["compat"],
+    "rules": {
+        "compat/compat": 2
+    },
+    "settings": {
+        "polyfills": ["fetch"]
+    }
+}

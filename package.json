@@ -4,7 +4,8 @@
         "@types/source-map": "^0.5.0",
         "requestidlecallback": "^0.3.0",
         "requirejs": "^2.3.3",
-        "source-map": "^0.5.6"
+        "source-map": "^0.5.6",
+        "whatwg-fetch": "^2.0.3"
     },
     "devDependencies": {
         "@types/js-yaml": "^3.9.0",
@@ -12,6 +13,8 @@
         "@types/webpack": "^3.0.4",
         "awesome-typescript-loader": "^3.2.1",
         "broken-link-checker": "^0.7.6",
+        "eslint": "^4.2.0",
+        "eslint-plugin-compat": "^1.0.4",
         "glob-fs": "^0.1.6",
         "js-yaml": "^3.9.0",
         "lodash-match-pattern": "^2.0.1",

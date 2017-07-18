@@ -9,6 +9,7 @@ module.exports = {
     entry: {
         main: [
             "requestidlecallback",
+            "whatwg-fetch",
             "./ts/index.ts"
         ]
     },

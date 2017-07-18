@@ -1,4 +1,8 @@
 .*
+!/.gitignore
+!/.eslintrc
+!/.gitlab-ci.yml
+!/.dir-locals.el
 /node_modules
 /demo
 /site
