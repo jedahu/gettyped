@@ -9,7 +9,7 @@ module.exports = {
     entry: {
         main: [
             "requestidlecallback",
-            "whatwg-fetch",
+            "./js/polyfill.js",
             "./ts/index.ts"
         ]
     },
