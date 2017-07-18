@@ -1,7 +1,7 @@
 #+TITLE: Get Typed
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-15 Sat]
+#+DATE: [2017-07-18 Tue]
 
 Types create guarantees. They describe properties of a program that can be
 verified without running the program.
@@ -12,6 +12,5 @@ verified without running the program.
   :CUSTOM_ID: gt-topics-list
   :END:
 
-- [[./why][Why types]]
-- Products and sums
-- [[./maybe-null][Maybe: null done right]]
+- [[./catch-simple-mistakes][Catch simple mistakes]]
+- [[./refined-types][Refine existing types]]

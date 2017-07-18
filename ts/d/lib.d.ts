@@ -18,6 +18,16 @@ declare module "vs/language/typescript/lib/typescriptServices" {
     export = x;
 }
 
+declare module "vex-js" {
+    const x : any;
+    export = x;
+}
+
+declare module "vex-dialog" {
+    const x : any; 
+    export = x;
+}
+
 type RequestIdleCallbackFn =
     (f : (deadline : {timeRemaining() : number}) => void) => void;
 

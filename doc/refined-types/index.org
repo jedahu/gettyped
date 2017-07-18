@@ -1,0 +1,23 @@
+#+TITLE: Refine existing types
+#+AUTHOR: Jeremy Hughes
+#+EMAIL: jedahu@gmail.com
+#+DATE: [2017-07-18 Tue]
+
+
+When the type you have at hand is not precise enough, refine it with a
+predicate.
+
+#+BEGIN_SRC ts :module get-username
+export const usernamePrompt = () =>
+    $gt.prompt("Choose a username", "username");
+
+export const run = async () : Promise<string> => {
+    const name = await usernamePrompt();
+    return `Hello ${name}!`;
+};
+#+END_SRC
+
+#+BEGIN_SRC check :module get-username
+"$result": |
+  "Hello undefined!"
+#+END_SRC

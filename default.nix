@@ -7,6 +7,7 @@ with builtins;
 rec {
   inherit yarn nodejs pandoc rsync;
   main-js = "main.js";
+  main-css = "main.css";
   ghcWith = pkgs.haskellPackages.ghcWithPackages;
   config-json = readFile config-path;
   config = fromJSON config-json;
@@ -81,6 +82,7 @@ rec {
     src = unpack-tree [
       ["cp" ./ts "ts"]
       ["cp" ./js "js"]
+      ["cp" ./css "css"]
       ["ln" ./tsconfig-base.json "tsconfig-base.json"]
       ["ln" ./webpack.config.ts "webpack.config.ts"]
       ["cp" (node-deps + "/node_modules") "node_modules"]
@@ -89,18 +91,19 @@ rec {
     phases = "unpackPhase buildPhase";
     buildPhase = ''
       mkdir "$out"
-      mainjs="$out/${main-js}"
 
       export NODE_PATH="./node_modules"
       "./node_modules/.bin/webpack" \
           --config ./webpack.config.ts \
           --output-path . \
-          --output-filename main.js || exit 1
+          || exit 1
       cat "${config-js}" \
           "node_modules/requirejs/require.js" \
           "js/page-config.js" \
           "main.js" \
-          >"$mainjs" || exit 1
+          >"$out/${main-js}" \
+          || exit 1
+      cp "main.css" "$out/${main-css}"
     '';
   };
   page-html = path: absPath: pkgs.stdenv.mkDerivation rec {
@@ -227,9 +230,9 @@ rec {
     buildPhase = ''
       mkdir -p "$out/modules"
       ln -s "${./static}" "$out/static"
-      ln -s "${./css/main.css}" "$out/main.css"
       ln -s "${libs-d-ts}" "$out/libs.d.ts"
       ln -s "${compile-js}/${main-js}" "$out/${main-js}"
+      ln -s "${compile-js}/${main-css}" "$out/${main-css}"
       for p in ${concatStringsSep " " htmls}
       do
         rsync -aL "$p/" "$out/"

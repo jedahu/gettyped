@@ -13,6 +13,12 @@ declare type $GT = {
         size : number | [number, number],
         f : (ctx : CanvasRenderingContext2D) => void
     ) => void;
+
+    prompt : (
+        message : string,
+        placeholder? : string,
+        defaultValue? : string
+    ) => Promise<string | undefined>;
 };
 
 declare const $gt : $GT;

@@ -1,7 +1,6 @@
 const webpack = require("webpack");
 const path = require("path");
-// import * as webpack from "webpack";
-// import * as favicons from "favicons-webpack-plugin";
+const ExtractText = require("extract-text-webpack-plugin");
 
 const DEV = process.env.NODE_ENV = "development";
 
@@ -31,24 +30,33 @@ module.exports = {
         library: "GetTyped",
         umdNamedDefine: true
     },
-    devtool: "",
+    devtool: "source-map",
     plugins: [
-        // new webpack.optimize.UglifyJsPlugin({
-        //     minimize: true,
-        //     sourceMap: true,
-        //     include: /\.min\.js$/,
-        // })
+        new webpack.optimize.UglifyJsPlugin({
+            minimize: true,
+            sourceMap: true
+        }),
+        new ExtractText({
+            filename: "[name].css"
+        })
     ],
     module: {
-        rules: [{
-            test: /\.tsx?$/,
-            loader: "awesome-typescript-loader",
-            exclude: /node_modules/,
-            query: {
-                declaration: false,
-                configFileName: "./ts/tsconfig.json"
+        rules: [
+            {   test: /\.tsx?$/,
+                loader: "awesome-typescript-loader",
+                exclude: /node_modules/,
+                query: {
+                    declaration: false,
+                    configFileName: "./ts/tsconfig.json"
+                }
+            },
+            {   test: /\.css/,
+                use: ExtractText.extract({
+                    fallback: "style-loader",
+                    use: ["css-loader"]
+                })
             }
-        }]
+        ]
     }
 }
 // // TODO https://stackoverflow.com/questions/34851839/how-to-handle-web-workers-standard-syntax-with-webpack

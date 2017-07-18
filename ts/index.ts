@@ -17,6 +17,8 @@ import {clearOutput, writeResult} from "./output";
 import {data, html as h} from "./dom";
 import {siteRoot, scrollbarSize} from "./config";
 import {prequire} from "./prequire";
+import {withTimeout, rejectIfTimedOut} from "./task";
+import "../css/main.css";
 
 const fetchText = (url : string) : Promise<string> =>
     fetch(url).then(r => r.text());
@@ -32,10 +34,15 @@ const libs_d_ts = () =>
 const getWorker = () =>
     monaco.languages.typescript.getTypeScriptWorker();
 
-const getClient = async (uri : monaco.Uri) : Promise<ts.LanguageService> => {
-    const worker = await getWorker();
-    return await worker(uri);
-};
+const getClient = (uri : monaco.Uri) : Promise<ts.LanguageService> =>
+    withTimeout(async token => {
+        const worker = await getWorker();
+        rejectIfTimedOut(token);
+        return await worker(uri);
+    }, {
+        tries: 5,
+        timeout: 10000
+    });
 
 const resizeEditor =
     (m : Pick<Module, "editor" | "model" | "container">) : void => {
@@ -489,7 +496,7 @@ export const init = (config : Config) => {
             }
             else {
                 editIcon.classList.add("gt-run-spinner");
-                requestIdleCallback(() => {
+                requestAnimationFrame(() => {
                     modules = initEditors(config);
                     requestAnimationFrame(() => {
                         editIcon.classList.remove("gt-run-spinner");

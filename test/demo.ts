@@ -11,7 +11,7 @@ const mockCanvasContext : CanvasRenderingContext2D = new Proxy({}, {
     get: () => noop
 }) as any;
 
-const doCheck = (val : any, check : string) : void => {
+const doCheck = (name : string, val : any, check : string) : void => {
     const fail = matchPattern(val, check);
     if (null !== fail) {
         throw new Error(`Output check fail: ${name}: ${fail}.`);
@@ -22,9 +22,16 @@ const logCheck = (checks : {[k : string] : string}) => (...xs : Array<any>) : vo
     const name = xs && xs[0];
     const check = name && xs.length >= 2 && checks[name];
     if (check) {
-        doCheck(xs[1], check);
+        doCheck(name, xs[1], check);
     }
 };
+
+const prompt = (
+    message : string,
+    placeholder? : string,
+    defaultValue? : string
+) : Promise<string | undefined> =>
+    Promise.resolve(defaultValue);
 
 const gtlib = (checks : {}) : $GT => ({
     assert: gt.assert,
@@ -36,7 +43,8 @@ const gtlib = (checks : {}) : $GT => ({
         size : number | [number, number],
         f : (ctx : CanvasRenderingContext2D) => A
     ) : A =>
-        f(mockCanvasContext)
+        f(mockCanvasContext),
+    prompt
 });
 
 const glob = () => globfs({gitignore: false});
@@ -106,7 +114,7 @@ const expectNoError = (p : string) =>
                                 ? await x
                                 : x;
                             if (retCheck !== undefined) {
-                                doCheck(ret, retCheck);
+                                doCheck("$result", ret, retCheck);
                             }
                         }
                     })()
