@@ -1,6 +1,5 @@
 const webpack = require("webpack");
 const path = require("path");
-const ExtractText = require("extract-text-webpack-plugin");
 
 const DEV = process.env.NODE_ENV = "development";
 
@@ -30,16 +29,6 @@ module.exports = {
         library: "GetTyped",
         umdNamedDefine: true
     },
-    devtool: "source-map",
-    plugins: [
-        new webpack.optimize.UglifyJsPlugin({
-            minimize: true,
-            sourceMap: true
-        }),
-        new ExtractText({
-            filename: "[name].css"
-        })
-    ],
     module: {
         rules: [
             {   test: /\.tsx?$/,
@@ -49,12 +38,6 @@ module.exports = {
                     declaration: false,
                     configFileName: "./ts/tsconfig.json"
                 }
-            },
-            {   test: /\.css/,
-                use: ExtractText.extract({
-                    fallback: "style-loader",
-                    use: ["css-loader"]
-                })
             }
         ]
     }

@@ -9,7 +9,7 @@
 
     window.MonacoEnvironment = {
         getWorkerUrl: function(/* workerId, label */) {
-            return `${siteRoot}/static/monaco-editor-worker-loader-proxy.js`;
+            return `${siteRoot}/monaco-editor-worker-loader-proxy.js`;
         }
     };
 })();

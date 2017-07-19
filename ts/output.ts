@@ -21,15 +21,15 @@ export const stringify = (x : any, asJson : boolean = false) : Node =>
 
 type LogTag = "result" | "log" | "syntax" | "types" | "runtime" | "note" | "canvas";
 
-const logTagInfo = (tag : LogTag) : string =>
+const logTagInfo = (tag : LogTag) : string | null =>
     ({
-        result: "result:",
-        log: "info:",
-        syntax: "syntax error:",
-        types: "semantic error:",
-        runtime: "runtime error:",
-        note: "!!",
-        canvas: ""
+        result: "result",
+        log: "info",
+        syntax: "syntax error",
+        types: "semantic error",
+        runtime: "runtime error",
+        note: null,
+        canvas: null
     })[tag];
 
 const writeToOutput =
@@ -38,13 +38,16 @@ const writeToOutput =
     (html : Array<Node>, data? : {[k : string] : any}) => {
         m.output.classList.remove("gt-do-close");
         m.output.style.height = "auto";
+        const title = logTagInfo(tag);
         const entry =
             h("li",
               {class: `gt-log-entry gt-log-entry-${tag}`},
-              [ h("span",
-                  {class: "gt-log-tag"},
-                  [logTagInfo(tag), " "]),
-                ...html
+              [ h("i",
+                  { class: "gt-log-tag material-icons md-24",
+                    ...(title ? {title} : {})
+                  },
+                  []),
+                h("span", {}, html)
               ],
               {data});
         m.output.appendChild(entry);
@@ -79,18 +82,21 @@ const diagsHost = (pageNs : string) => ({
 
 export const writeDiag = (pageNs : string, m : Module) => (diag : Diag) => {
     const pos =
-        diag.file && diag.start !== undefined
-        ? tss.getLineAndCharacterOfPosition(diag.file, diag.start)
+        diag.start !== undefined
+        ? m.model.getPositionAt(diag.start)
         : undefined;
     writeToOutput(m)(diag.diagType)([
         h("span",
-          {class: "gt-log-goto"},
-          [ h("span",
-              {class: "gt-log-diag-message"},
-              [tss.formatDiagnostics([diag], diagsHost(pageNs))]),
+          {class: pos ? "gt-log-goto" : ""},
+          [ h("span", {class: "gt-log-diag-message"}, [
+              tss.formatDiagnostics([diag], diagsHost(pageNs)),
+              ` (${m.path}`,
+              pos ? `:${pos.lineNumber}:${pos.column}` : "",
+              ")"
+          ]),
           ],
           pos
-          ? {data: {path: diag.module, line: pos.line, column: pos.character}}
+          ? {data: {path: diag.module, line: pos.lineNumber, column: pos.column}}
           : undefined)
     ]);
 };

@@ -5,7 +5,7 @@
 with pkgs;
 with builtins;
 rec {
-  inherit yarn nodejs pandoc rsync;
+  inherit (xorg) lndir;
   main-js = "main.js";
   main-css = "main.css";
   ghcWith = pkgs.haskellPackages.ghcWithPackages;
@@ -13,22 +13,37 @@ rec {
   config = fromJSON config-json;
   without-store = path:
     concatStringsSep "/" (lib.drop 3 (lib.splitString "/" path));
-  unpack-tree = paths: runCommand "unpack-tree" {}
+  unpack-tree = {echo ? false, cmd ? ""}: paths: runCommand "unpack-tree" {}
     ( ''mkdir -p "$out"
       ''
       +
       ( concatStringsSep "\n"
-        ( map (p:
+        ( map (item:
             let
+              entry = if typeOf item == "list" then item else [item];
+              p = if cmd == "" then entry else [cmd] ++ entry;
               opName = elemAt p 0;
               from = elemAt p 1;
-              to = elemAt p 2;
-              ops = {cp = "cp -r"; ln = "ln -s"; rsync = "${rsync}/bin/rsync -a";};
+              to = if length p < 3 then "$out" else "$out/${elemAt p 2}";
+              ops = {
+                cp = "cp -r";
+                ln = "ln -s";
+                lndir = "${lndir}/bin/lndir -silent";
+                rsync = "${rsync}/bin/rsync -a";
+                rsyncL = "${rsync}/bin/rsync -aL";
+              };
               op = getAttr opName ops;
+              echo_ = ''
+                echo ${opName} "${from}" "${to}"
+              '';
+              run = ''
+                mkdir -p "$(dirname "${to}")"
+                ${op} "${from}" "${to}"
+              '';
             in
-              ''mkdir -p "$(dirname "$out/${to}")"
-                ${op} "${from}" "$out/${to}"
-              ''
+              if echo
+              then echo_ + run
+              else run
           ) paths
         )
       )
@@ -36,7 +51,7 @@ rec {
   mkHsBin = path: inputs: pkgs.stdenv.mkDerivation rec {
     name = baseNameOf path;
     buildInputs = [(ghcWith inputs)];
-    src = unpack-tree [["cp" path "hs/${name}"]];
+    src = unpack-tree {} [["cp" path "hs/${name}"]];
     phases = "unpackPhase buildPhase";
     buildPhase = ''
       mkdir -p "$out/bin"
@@ -53,7 +68,7 @@ rec {
   html-filter = mkHsBin ./hs/html-filter (p: [p.pandoc p.tagsoup]);
   node-deps = pkgs.stdenv.mkDerivation rec {
     name = "node-deps";
-    src = unpack-tree [
+    src = unpack-tree {} [
       ["cp" ./package.json "package.json"]
       ["cp" ./yarn.lock "yarn.lock"]
     ];
@@ -76,13 +91,20 @@ rec {
       }());
     '';
   };
+  compile-css = writeTextFile {
+    name = "main.css";
+    destination = "/main.css";
+    text = concatStringsSep "\n" (map readFile [
+      ./css/main.css
+      (node-deps + "/node_modules/vex-js/dist/css/vex.css")
+      (node-deps + "/node_modules/vex-js/dist/css/vex-theme-plain.css")
+    ]);
+  };
   compile-js = pkgs.stdenv.mkDerivation rec {
-    inherit node-deps;
     name = "compile-js";
-    src = unpack-tree [
+    src = unpack-tree {} [
       ["cp" ./ts "ts"]
       ["cp" ./js "js"]
-      ["cp" ./css "css"]
       ["ln" ./tsconfig-base.json "tsconfig-base.json"]
       ["ln" ./webpack.config.ts "webpack.config.ts"]
       ["cp" (node-deps + "/node_modules") "node_modules"]
@@ -103,7 +125,6 @@ rec {
           "main.js" \
           >"$out/${main-js}" \
           || exit 1
-      cp "main.css" "$out/${main-css}"
     '';
   };
   page-html = path: absPath: pkgs.stdenv.mkDerivation rec {
@@ -132,7 +153,7 @@ rec {
   };
   page-modules = absPath: pkgs.stdenv.mkDerivation {
     name = "gettyped-page-modules";
-    src = unpack-tree [
+    src = unpack-tree {} [
       ["cp" absPath "page.org"]
       ["cp" ./tsconfig-base.json "tsconfig-base.json"]
       ["cp" ./tsconfig.json "tsconfig.json"]
@@ -213,6 +234,7 @@ rec {
   };
   libs-d-ts = writeTextFile {
     name = "libs.d.ts";
+    destination = "/libs.d.ts";
     text = lib.concatMapStrings readFile [
       "${node-deps}/node_modules/typescript/lib/lib.es6.d.ts"
       "${node-deps}/node_modules/typescript/lib/lib.es2016.full.d.ts"
@@ -222,26 +244,43 @@ rec {
   };
   site = pkgs.stdenv.mkDerivation rec {
     name = "gettyped-site";
-    src = ./.;
     phases = "unpackPhase buildPhase";
-    buildInputs = [rsync];
     htmls = map (x: x.html) pages;
     modules = map (x: x.modules) pages;
+    files = [
+      ./static
+      libs-d-ts
+      compile-css
+      compile-js
+    ];
+    src = unpack-tree
+      {cmd = "rsyncL"; echo = true;}
+      (map (x: "${x}/") (files ++ htmls ++ modules));
     buildPhase = ''
-      mkdir -p "$out/modules"
-      ln -s "${./static}" "$out/static"
-      ln -s "${libs-d-ts}" "$out/libs.d.ts"
-      ln -s "${compile-js}/${main-js}" "$out/${main-js}"
-      ln -s "${compile-js}/${main-css}" "$out/${main-css}"
-      for p in ${concatStringsSep " " htmls}
-      do
-        rsync -aL "$p/" "$out/"
-      done
-      for m in ${concatStringsSep " " modules}
-      do
-        rsync -aL "$m/modules/" "$out/modules/"
-      done
+      ln -s "${src}" "$out"
     '';
+    # buildPhase = ''
+    #   mkdir "$out"
+    #   cp -r ${./static} "$out/"
+    #   cp -r ${libs-d-ts} "$out/"
+    #   cp -r ${compile-js} "$out/"
+    #   cp -r ${compile-css} "$out/"
+    # '';
+    # buildPhase = ''
+    #   mkdir -p "$out/modules"
+    #   ln -s "${./static}" "$out/static"
+    #   ln -s "${libs-d-ts}" "$out/libs.d.ts"
+    #   ln -s "${compile-js}/${main-js}" "$out/${main-js}"
+    #   lndir -silent "${compile-css}" "$out"
+    #   for p in ${concatStringsSep " " htmls}
+    #   do
+    #     rsync -aL "$p/" "$out/"
+    #   done
+    #   for m in ${concatStringsSep " " modules}
+    #   do
+    #     rsync -aL "$m/modules/" "$out/modules/"
+    #   done
+    # '';
   };
   main = site;
 }

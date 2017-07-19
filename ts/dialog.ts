@@ -1,8 +1,6 @@
 import * as vex from "vex-js";
 import * as vexDialog from "vex-dialog";
 import {html as h} from "./dom";
-import "vex-js/dist/css/vex.css";
-import "vex-js/dist/css/vex-theme-plain.css";
 
 vex.registerPlugin(vexDialog);
 vex.defaultOptions.className = "vex-theme-plain";

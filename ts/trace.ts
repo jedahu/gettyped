@@ -2,7 +2,6 @@ import {SourceMapConsumer} from "source-map";
 import {Module, Modules} from "./types";
 import {html as h} from "./dom";
 import {arrayFlatMap, lastSegment, unTs} from "./util";
-import {siteRoot} from "./config";
 
 type TraceInfo = {
     regex : RegExp;
@@ -99,7 +98,7 @@ export const mapStackTrace = (trace : string, modules : Modules) : Array<HTMLEle
             const fields = x.match(info.regex);
             if (fields && fields.length === info.fields + 1) {
                 const [,, uri, ln, cn] = fields;
-                if (uri.includes(siteRoot) || /https?:\/\//.test(uri)) {
+                if (/https?:\/\//.test(uri)) {
                     return [];
                 }
                 const line = parseInt(ln, 10);

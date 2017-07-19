@@ -17,7 +17,6 @@ import {siteRoot, scrollbarSize} from "./config";
 import {prequire} from "./prequire";
 import {withTimeout, rejectIfTimedOut} from "./task";
 import * as dialog from "./dialog";
-import "../css/main.css";
 
 const fetchText = (url : string) : Promise<string> =>
     fetch(url).then(r => r.text());

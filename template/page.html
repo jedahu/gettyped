@@ -45,7 +45,9 @@ $body$
         </article>
         <nav>
             $if(is-post)$
-            <div class="gt-more-link"><a href="$site-root$">more motivations</a></div>
+            <div class="gt-more-link">
+                <a href="$if(site-root)$$site-root$$else$/$endif$">more motivations</a>
+            </div>
             $endif$
         </nav>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/typescript.min.js"></script>
