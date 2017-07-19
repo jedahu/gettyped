@@ -216,8 +216,8 @@ const updateJs =
             m.js = emitted.
                 outputFiles[0].
                 text.
-                replace(/^define\(/, `define('${pageNs}/${m.path}',`) +
-                `\n//# sourceURL=${pageNs}/${m.path}.ts`;
+                replace(/^define\(/, `define('${m.path}',`) +
+                `\n//# sourceURL=${m.path}.ts`;
         })).then(_ => {});
 
 const runModule =
@@ -233,21 +233,6 @@ const runModule =
             return {
                 tag: "diagnostics",
                 val: arrayFlatMap(Object.values(diagMap), d => d)
-                        //     const pos =
-                        //         d.start != undefined
-                        //         ? getModule(path, modules).model.getPositionAt(d.start)
-                        //         : undefined;
-                        //     const position =
-                        //         pos
-                        //         ? {line: pos.lineNumber, column: pos.column}
-                        //         : undefined;
-                        //     return ({
-                        //         module: path,
-                        //         message: diagnosticMessage(d),
-                        //         diagType: d.diagType,
-                        //         position
-                        //     });
-                        // }))
             }
         }
         else {
@@ -264,7 +249,7 @@ const runModule =
                             // new Function(m.js)();
                             eval(m.js);
                         }
-                        const [m] = await prequire([`${pageNs}/${mod.path}`]);
+                        const [m] = await prequire([mod.path]);
                         const ret =
                             typeof m.run === "function"
                             ? m.run()

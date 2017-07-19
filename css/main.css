@@ -565,6 +565,11 @@ button.material-icons {
     content: 'sentiment_very_dissatisfied';
 }
 
+.gt-log-note {
+    color: red;
+    text-transform: uppercase;
+}
+
 .gt-log-trace {
     white-space: pre-wrap;
 }

@@ -12,7 +12,9 @@
     </head>
     <body class="language-typescript">
         <header>
-            <h1><a href="$site-root$">Get <span>:</span> Typed</a></h1>
+            <h1>
+                <a href="$if(site-root)$$site-root$$else$/$endif$">Get <span>:</span> Typed</a>
+            </h1>
             <h2>motivations for using types</h2>
             <span class="gt-edit-toggle">
                 <span>edit<br/><span class="gt-toggle-state"></span></span>

@@ -1,13 +1,30 @@
 #+TITLE: Get Typed
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-18 Tue]
+#+DATE: [2017-07-20 Thu]
 
 Types create guarantees. They describe properties of a program that can be
-verified without running the program.
+verified without running it.
+
+#+BEGIN_SRC ts :module welcome :hide t
+export const run = () : void => {
+    $gt.log("Welcome to Get Typed");
+    $gt.canvas(100, ctx => {
+        const fill = $gt.randomInt(0, 0xaaaaaa).toString(16);
+        ctx.fillStyle = `#${fill}`;
+        ctx.fillRect(30, 15, 5, 23);
+        ctx.fillRect(65, 15, 5, 23);
+        ctx.fillRect(47, 47, 6, 6);
+        ctx.beginPath();
+        ctx.arc(50, 65, 26, Math.PI, 2*Math.PI, true);
+        ctx.closePath();
+        ctx.fill();
+    });
+};
+#+END_SRC
 
 
-* Topics
+** Types can be used to...
   :PROPERTIES:
   :CUSTOM_ID: gt-topics-list
   :END:

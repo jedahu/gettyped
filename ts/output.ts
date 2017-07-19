@@ -162,7 +162,7 @@ export const writeResult =
         x : RunRet
     ) => {
         if (x.tag === "diagnostics") {
-            writeNote(m)("Compile failed.");
+            writeNote(m)("Compile failed");
             for (const diag of x.val) {
                 writeDiag(pageNs, m)(diag)
             }
