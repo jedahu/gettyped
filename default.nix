@@ -243,4 +243,5 @@ rec {
       done
     '';
   };
+  main = site;
 }
