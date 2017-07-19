@@ -59,22 +59,18 @@ convert t = [t]
 
 convertModule :: Text -> M.Map Text Text -> [TagTree Text] -> TagTree Text
 convertModule mod attrs children =
-  TagBranch
-  "details"
-  [ ("open", if hide then "" else "open")
-  , ("id", codeId)
-  , ("class", "gt-module-section")
-  ]
-  [head, rest]
+  TagBranch "details" detailAttrs [head, rest]
   where
     hide = M.member "rundoc-hide" attrs
     static = M.member "rundoc-static" attrs
     ident = M.lookup "id" attrs
     codeId = fromMaybe ("gt-module:" <> mod) ident
     head = summary mod
+    openAttr = if hide then [] else [("open", "open")]
+    detailAttrs = openAttr <> [("id", codeId), ("class", "gt-module-section")]
     tools = TagBranch "div" [("class", "gt-module-tools")] []
     output = TagBranch "ul" [("class", "gt-module-output")] []
-    summary s = TagBranch "summary" []
+    summary s = TagBranch "summary" [("data-gt-module", mod)]
                 [ TagBranch "span" [("class", "gt-module-title")]
                   [ TagLeaf (TagText (s <> ".ts")) ]
                 , TagBranch "i" [("class", "gt-less-more material-icons md-24 md-dark")] []

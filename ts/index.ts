@@ -442,6 +442,9 @@ const initEditors = (config : Config) => {
         m.revertButton.addEventListener("click", () => revertModule(m, modules));
         m.output.addEventListener("click", handleOutputClick(modules));
         m.clearButton.addEventListener("click", () => clearOutput(m));
+        m.section.getElementsByTagName("summary")[0].addEventListener("click", () => {
+            resizeEditor(m);
+        });
         stopModuleSpinner(m);
     }
 
