@@ -33,11 +33,8 @@ const prompt = (
 ) : Promise<string | undefined> =>
     Promise.resolve(defaultValue);
 
-const gtlib = (checks : {}) : $GT => ({
-    assert: gt.assert,
-    assertp: gt.assertp,
-    randomFloat: gt.randomFloat,
-    randomInt: gt.randomInt,
+const gtlib = (checks : {}) : $GT => Object.freeze({
+    ...gt,
     log: logCheck(checks),
     canvas: <A>(
         size : number | [number, number],
@@ -103,10 +100,16 @@ const expectNoError = (p : string) =>
         "should succeed at runtime: " + p,
         () => withGtLib(
             p,
-            retCheck =>
-                painless.assert.isFulfilled(
+            retCheck => {
+                let m : any;
+                try {
+                    m = require(p);
+                }
+                catch (e) {
+                    painless.assert(false, e.message);
+                }
+                return painless.assert.isFulfilled(
                     (async () => {
-                        const m = require(p);
                         if (typeof m.run === "function") {
                             const x = m.run();
                             const ret =
@@ -118,7 +121,8 @@ const expectNoError = (p : string) =>
                             }
                         }
                     })()
-                )));
+                );
+            }));
 
 for (const p of paths) {
     fs.existsSync(p + ".se")

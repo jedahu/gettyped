@@ -1,16 +1,10 @@
 import {Module} from "./types";
 import {writeLog, writeCanvas} from "./output";
-import {assert, assertp, randomInt, randomFloat} from "./gt-lib-shared";
-import * as vex from "vex-js";
-import * as vexDialog from "vex-dialog";
-import "vex-js/dist/css/vex.css";
-import "vex-js/dist/css/vex-theme-plain.css";
-
-vex.registerPlugin(vexDialog);
-vex.defaultOptions.className = "vex-theme-plain";
+import {animals, assert, assertp, randomInt, randomFloat} from "./gt-lib-shared";
+import {prompt} from "./dialog";
 
 const mkCanvas =
-    <A>(m : Module) => (
+    (m : Module) => <A>(
         size : number | [number, number],
         f : (ctx : CanvasRenderingContext2D) => A
     ) : A => {
@@ -21,34 +15,15 @@ const mkCanvas =
         return f(writeCanvas(m)(width, height));
     };
 
-const prompt =
-    async (
-        message : string,
-        placeholder? : string,
-        defaultValue? : string
-    ) : Promise<string | undefined> =>
-    new Promise<string | undefined>((res, rej) => {
-        try {
-            vex.dialog.prompt({
-                message,
-                placeholder,
-                buttons: [vex.dialog.buttons.YES],
-                callback: (val? : string) => res(val || defaultValue)
-            });
-        }
-        catch (e) {
-            rej(e);
-        }
-    });
-
-export const mk$GT = (m : Module) : $GT => ({
+export const mk$GT = (m : Module) : $GT => Object.freeze({
     assert,
     assertp,
     randomInt,
     randomFloat,
     log: writeLog(m),
     canvas: mkCanvas(m),
-    prompt
+    prompt,
+    animals
 });
 
 export const withGtLib =

@@ -1,8 +1,6 @@
 import {getTsOpts} from "./tsconfig";
 import {
     objMap,
-    objValues,
-    objEntries,
     arrayFlatMap,
     unTs,
     lastSegment,
@@ -12,12 +10,13 @@ import {manageFocusOutlines} from "./focus-outline";
 import {withGtLib} from "./gt-lib";
 import * as monaco from "./monaco";
 import * as tss from "./ts-services";
-import {Diag, RunRet, Editor, Module, Modules} from "./types";
-import {clearOutput, writeResult} from "./output";
+import {Config, Diag, RunRet, Editor, Module, Modules} from "./types";
+import {clearOutput, writeResult, stringify} from "./output";
 import {data, html as h} from "./dom";
 import {siteRoot, scrollbarSize} from "./config";
 import {prequire} from "./prequire";
 import {withTimeout, rejectIfTimedOut} from "./task";
+import * as dialog from "./dialog";
 import "../css/main.css";
 
 const fetchText = (url : string) : Promise<string> =>
@@ -42,6 +41,22 @@ const getClient = (uri : monaco.Uri) : Promise<ts.LanguageService> =>
     }, {
         tries: 5,
         timeout: 10000
+    }).
+    catch(e => {
+        dialog.alert({
+            title: "Failed to load typescript language service",
+            message: [
+                h("p", {}, [
+                    "Sometimes the web worker takes too long to spin up.",
+                    " Try reloading the page."
+                ]),
+                h("p", {}, [
+                    "Error: ",
+                    stringify(e)
+                ])
+            ]
+        });
+        return Promise.reject(e);
     });
 
 const resizeEditor =
@@ -57,7 +72,7 @@ const resizeEditor =
     };
 
 const resizeEditors = (mods : Modules) : void => {
-    for (const m of objValues(mods)) {
+    for (const m of Object.values(mods)) {
         m.editor.layout();
         resizeEditor(m);
     };
@@ -104,7 +119,7 @@ const transitivelyImportedModules =
 
 const dependentModules =
     (path : string, mods : Modules) : Array<Module> =>
-    objValues(mods).filter(m => m.imports.includes(path));
+    Object.values(mods).filter(m => m.imports.includes(path));
 
 // const transitivelyDependentModules =
 //     (path : string, mods : Modules) : Array<Module> => {
@@ -132,9 +147,8 @@ const stopModuleSpinner = ({section} : {section : HTMLElement}) => {
     spinner.classList.remove("gt-do-spin");
 };
 
-const refreshDependentModules = (path : string, mods : Modules) : void => {
-    inIdleTime(go());
-    function* go() : IterableIterator<void> {
+const refreshDependentModules = (path : string, mods : Modules) : void =>
+    inIdleTime(function*() : IterableIterator<void> {
         const deps = dependentModules(path, mods);
         yield;
         for (const {editor} of deps) {
@@ -158,17 +172,16 @@ const refreshDependentModules = (path : string, mods : Modules) : void => {
             editor.setPosition(pos);
             yield;
         }
-    }
-};
+    });
 
-const getDiagnostics = async (uri : monaco.Uri) : Promise<Array<Diag>> => {
-    const client = await getClient(uri);
+const getDiagnostics = async (m : Module) : Promise<Array<Diag>> => {
+    const client = await getClient(m.uri);
     const [syntactic, semantic] = await Promise.all([
-        client.getSyntacticDiagnostics(uri.toString()),
-        client.getSemanticDiagnostics(uri.toString())
+        client.getSyntacticDiagnostics(m.uri.toString()),
+        client.getSemanticDiagnostics(m.uri.toString())
     ]);
-    return syntactic.map((d) : Diag => ({...d, diagType : "syntax"})).
-        concat(semantic.map((d) : Diag => ({...d, diagType: "types"})));
+    return syntactic.map((d) : Diag => ({...d, diagType : "syntax", module: m.path})).
+        concat(semantic.map((d) : Diag => ({...d, diagType: "types", module: m.path})));
 };
 
 type DiagMap = {[key : string] : Array<Diag>};
@@ -176,9 +189,9 @@ type DiagMap = {[key : string] : Array<Diag>};
 const getDiagnosticsMap =
     async (modules : Array<Module>) : Promise<DiagMap> => {
         const xs = await Promise.all(
-            modules.map(async ({uri, path}) => {
-                const diags = await getDiagnostics(uri);
-                return {diags, path};
+            modules.map(async m => {
+                const diags = await getDiagnostics(m);
+                return {diags, path: m.path};
             }));
         const dmap : DiagMap = {};
         for (const x of xs) {
@@ -208,20 +221,6 @@ const updateJs =
                 `\n//# sourceURL=${pageNs}/${m.path}.ts`;
         })).then(_ => {});
 
-const diagnosticMessage = (diag : ts.Diagnostic) : string => {
-    const msg = diag.messageText;
-    if (typeof msg === "string") {
-        return msg;
-    }
-    let chain = msg;
-    let s = chain.messageText;
-    while (chain.next) {
-        chain = chain.next;
-        s = s + "\n" + chain.messageText;
-    };
-    return s;
-};
-
 const runModule =
     async (
         pageNs : string,
@@ -234,25 +233,22 @@ const runModule =
         if (Object.keys(diagMap).length > 0) {
             return {
                 tag: "diagnostics",
-                val: arrayFlatMap(
-                    objEntries(diagMap),
-                    ([path, diags]) =>
-                        diags.map(d => {
-                            const pos =
-                                d.start != undefined
-                                ? getModule(path, modules).model.getPositionAt(d.start)
-                                : undefined;
-                            const position =
-                                pos
-                                ? {line: pos.lineNumber, column: pos.column}
-                                : undefined;
-                            return ({
-                                module: path,
-                                message: diagnosticMessage(d),
-                                diagType: d.diagType,
-                                position
-                            });
-                        }))
+                val: arrayFlatMap(Object.values(diagMap), d => d)
+                        //     const pos =
+                        //         d.start != undefined
+                        //         ? getModule(path, modules).model.getPositionAt(d.start)
+                        //         : undefined;
+                        //     const position =
+                        //         pos
+                        //         ? {line: pos.lineNumber, column: pos.column}
+                        //         : undefined;
+                        //     return ({
+                        //         module: path,
+                        //         message: diagnosticMessage(d),
+                        //         diagType: d.diagType,
+                        //         position
+                        //     });
+                        // }))
             }
         }
         else {
@@ -291,6 +287,7 @@ const runModuleDisplay =
         clearOutput(mod);
         try {
             await writeResult(
+                {pageNs},
                 mod,
                 modules,
                 await runModule(pageNs, mod, modules));
@@ -324,10 +321,6 @@ const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
             }
         }
     }
-};
-
-type Config = {
-    pageNs: string;
 };
 
 const initEditors = (config : Config) => {
@@ -458,7 +451,7 @@ const initEditors = (config : Config) => {
                     }]];
                 }));
 
-    for (const m of objValues(modules)) {
+    for (const m of Object.values(modules)) {
         m.model.setValue(m.originalText);
         m.model.onDidChangeContent(() => contentChangeHandler(m, modules));
         m.runButton.addEventListener("click", () => runModuleDisplay(config, m, modules));

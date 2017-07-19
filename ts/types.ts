@@ -1,3 +1,7 @@
+export type Config = {
+    pageNs: string;
+};
+
 export type Editor = monaco.editor.IStandaloneCodeEditor;
 export type Model = monaco.editor.IModel;
 
@@ -21,7 +25,10 @@ export type Module = {
 export type Modules = {[path : string] : Module};
 
 export type DiagType = "syntax" | "types";
-export type Diag = ts.Diagnostic & {diagType : DiagType};
+export type Diag = ts.Diagnostic & {
+    diagType : DiagType;
+    module : string;
+};
 
 export type DiagInfo = {
     module : string;
@@ -31,7 +38,7 @@ export type DiagInfo = {
 };
 
 export type RunRet =
-    {tag : "diagnostics"; val : Array<DiagInfo>}
+    {tag : "diagnostics"; val : Array<Diag>}
     | {tag : "run"; val : Promise<["value"|"runtime", any]>};
 
 export type ObjMap<A> = {[k : string] : A};

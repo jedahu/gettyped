@@ -1,15 +1,15 @@
 #+TITLE: GT lib
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-18 Tue]
+#+DATE: [2017-07-19 Wed]
 
 
 The =$gt= value is globally available and has a few utility functions on it for
 asserting, logging, generating random numbers, and drawing to a canvas which
-appears in the output log.
+appears in the output log. It also contains a list of animal names.
 
 #+BEGIN_SRC ts :module gt-lib :static t
-declare type $GT = {
+declare type $GT = Readonly<{
     assert : (x : boolean, msg? : string) => void;
     assertp : (p : Promise<boolean>, msg? : string) => Promise<void>;
     log : (...xs : Array<any>) => void;
@@ -19,7 +19,8 @@ declare type $GT = {
         size : number | [number, number],
         f : (ctx : CanvasRenderingContext2D) => void
     ) => void;
-};
+    animals : ReadonlyArray<string>;
+}>;
 
 declare const $gt : $GT;
 #+END_SRC
@@ -31,7 +32,8 @@ Here be demos.
 export const run = () => {
     $gt.log("randoms", {
         int: $gt.randomInt(1, 10),
-        float: $gt.randomFloat(3.3, 9.9)
+        float: $gt.randomFloat(3.3, 9.9),
+        animal: $gt.animals[$gt.randomInt(0, $gt.animals.length - 1)]
     });
     $gt.log("canvas...");
     return "there you go";
@@ -40,7 +42,7 @@ export const run = () => {
 
 #+BEGIN_SRC check :module logging
 randoms: |
-  {int: _.isNumber, float: _.isNumber}
+  {int: _.isNumber, float: _.isNumber, animal: _.isString}
 $result: |
   _.isString
 #+END_SRC

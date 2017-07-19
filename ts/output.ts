@@ -1,11 +1,12 @@
-import {DiagInfo, Module, Modules, RunRet} from "./types";
+import * as tss from "./ts-services";
+import {Config, Diag, Module, Modules, RunRet} from "./types";
 import {html as h, text as t} from "./dom";
-import {assertNever, arrayFlatMap} from "./util";
+import {assertNever, arrayFlatMap, addTs, lastSegment} from "./util";
 import {mapStackTrace} from "./trace";
 
 const unnamedTypes = [Object, String, Number, RegExp, Date];
 
-const stringify = (x : any, asJson : boolean = false) : Node =>
+export const stringify = (x : any, asJson : boolean = false) : Node =>
     typeof x === "string" && !asJson
     ? document.createTextNode(x)
     : typeof x === "undefined"
@@ -58,21 +59,39 @@ export const writeLog = (m : Module) => (...xs : Array<any>) =>
                 t(" ")
             ]));
 
-export const writeDiag = (m : Module) => (diag : DiagInfo) => {
-    const {line, column} =
-        diag.position || {line: undefined, column: undefined};
+const diagsHost = (pageNs : string) => ({
+    getCurrentDirectory() : string {
+        return `"/${pageNs}`;
+    },
+    getCanonicalFileName(name : string) : string {
+        return name.startsWith("/")
+            ? addTs(name)
+            : name.startsWith("./")
+            ? addTs(`/${pageNs}/${lastSegment(name)}`)
+            : name.includes("/")
+            ? addTs(`/${name}`)
+            : addTs(`/${pageNs}/${name}`);
+    },
+    getNewLine() : string {
+        return "\n";
+    }
+});
+
+export const writeDiag = (pageNs : string, m : Module) => (diag : Diag) => {
+    const pos =
+        diag.file && diag.start !== undefined
+        ? tss.getLineAndCharacterOfPosition(diag.file, diag.start)
+        : undefined;
     writeToOutput(m)(diag.diagType)([
         h("span",
           {class: "gt-log-goto"},
           [ h("span",
               {class: "gt-log-diag-message"},
-              [diag.message]),
-            t(" "),
-            h("span",
-              {class: "gt-log-diag-module"},
-              [`(${diag.module}.ts:${line}:${column})`]),
+              [tss.formatDiagnostics([diag], diagsHost(pageNs))]),
           ],
-          {data: {path: diag.module, line, column}})
+          pos
+          ? {data: {path: diag.module, line: pos.line, column: pos.character}}
+          : undefined)
     ]);
 };
 
@@ -129,29 +148,35 @@ export const writeCanvas =
         return canvas.getContext("2d") as CanvasRenderingContext2D;
     };
 
-export const writeResult = async (m : Module, ms : Modules, x : RunRet) => {
-    if (x.tag === "diagnostics") {
-        writeNote(m)("Compile failed.");
-        for (const diag of x.val) {
-            writeDiag(m)(diag)
+export const writeResult =
+    async (
+        {pageNs} : Pick<Config, "pageNs">,
+        m : Module,
+        ms : Modules,
+        x : RunRet
+    ) => {
+        if (x.tag === "diagnostics") {
+            writeNote(m)("Compile failed.");
+            for (const diag of x.val) {
+                writeDiag(pageNs, m)(diag)
+            }
         }
-    }
-    else if (x.tag === "run") {
-        const [tag, val] = await x.val;
-        if (tag === "runtime") {
-            writeRuntime(m, ms)(val);
-        }
-        else if (tag === "value") {
-            writeRet(m)(val);
+        else if (x.tag === "run") {
+            const [tag, val] = await x.val;
+            if (tag === "runtime") {
+                writeRuntime(m, ms)(val);
+            }
+            else if (tag === "value") {
+                writeRet(m)(val);
+            }
+            else {
+                assertNever(tag);
+            }
         }
         else {
-            assertNever(tag);
+            assertNever(x);
         }
-    }
-    else {
-        assertNever(x);
-    }
-}
+    };
 
 export const clearOutput = (m : Module) => {
     m.output.style.height = `${m.output.offsetHeight}px`;

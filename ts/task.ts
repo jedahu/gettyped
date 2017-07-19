@@ -50,10 +50,8 @@ export const withTimeout =
         const go = (tries : number) => {
             const cancelToken = opts.cancelToken || mkCancelToken();
             task(cancelToken).then(a => {
-                if (cancelToken.canceled === undefined) {
-                    fulfilled = true;
-                    res(a);
-                }
+                fulfilled = true;
+                res(a);
             });
             setTimeout(() => {
                 if (!fulfilled) {

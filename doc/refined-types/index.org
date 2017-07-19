@@ -1,23 +1,195 @@
 #+TITLE: Refine existing types
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-18 Tue]
+#+DATE: [2017-07-19 Wed]
 
 
 When the type you have at hand is not precise enough, refine it with a
 predicate.
 
-#+BEGIN_SRC ts :module get-username
-export const usernamePrompt = () =>
-    $gt.prompt("Choose a username", "username");
+#+BEGIN_SRC ts :module dirty-data :hide t
+const randomAnimal = () : string =>
+    $gt.animals[$gt.randomInt(0, $gt.animals.length)];
 
-export const run = async () : Promise<string> => {
-    const name = await usernamePrompt();
-    return `Hello ${name}!`;
+const randomSpace = () : string =>
+    " ".repeat($gt.randomInt(0, 2));
+
+const randomAnimals = () : string => {
+    const xs : Array<string> = [];
+    let n = $gt.randomInt(0, 2);
+    while (n-- >= 0) {
+        xs.push(randomAnimal());
+    }
+    const s = xs.join(" ");
+    const space = $gt.randomInt(-1, 1);
+    return space === 0
+        ? s
+        : randomSpace() + s + randomSpace();
+}
+
+export const getDirtyData = () : Array<string> => {
+    const xs : Array<string> = [];
+    for (let i = 0; i < 5; ++i) {
+        xs.push(randomAnimals());
+    }
+    xs.push("");
+    return xs;
+};
+#+END_SRC
+
+For the purpose of this example a username should be a non blank string with no
+whitespace at beginning or end.
+#+BEGIN_SRC ts :module get-username
+import {getDirtyData} from "./dirty-data";
+
+export const basicPrompt =
+    async (title : string = "Choose a username") : Promise<string> =>
+    (await $gt.prompt(title, "username")) || "";
+
+export const hello = (name : string) : void =>
+    $gt.log("hello", name);
+
+export const goodbye = (name : string) : void =>
+    $gt.log("bye", name);
+
+export const run = async () : Promise<void> => {
+    const name = await basicPrompt();
+    hello(name);
+    for (const n of getDirtyData()) {
+        hello(n);
+        goodbye(n);
+    }
 };
 #+END_SRC
 
 #+BEGIN_SRC check :module get-username
-"$result": |
-  "Hello undefined!"
+hello: |
+  _.isString
+bye: |
+  _.isString
 #+END_SRC
+
+Clearly we need some validation because...
+
+#+BEGIN_SRC ts :module validation-helpers
+export const isValidUsername = (name : string) : boolean =>
+    /^\S(.*\S)?$/.test(name);
+
+export const assertValidUsername = (name : string) : void => {
+    $gt.assert(isValidUsername(name), "Invalid username");
+};
+#+END_SRC
+
+#+BEGIN_SRC ts :module assert-at-use-site :error runtime
+import {basicPrompt, goodbye} from "./get-username";
+import {getDirtyData} from "./dirty-data";
+import * as v from "./validation-helpers";
+
+export const hello = (name : string) : string => {
+    v.assertValidUsername(name);
+    return `Hello ${name}!`;
+};
+
+export const run = async () : Promise<void> => {
+    const name = await basicPrompt();
+    hello(name);
+    for (const n of getDirtyData()) {
+        hello(n);
+        goodbye(n);
+    }
+};
+#+END_SRC
+
+#+BEGIN_SRC check :module assert-at-use-site
+hello: |
+  _.isString
+bye: |
+  _.isString
+#+END_SRC
+
+
+#+BEGIN_SRC ts :module validate-at-input-site :error runtime
+import {hello, goodbye, basicPrompt} from "./get-username";
+import {getDirtyData} from "./dirty-data";
+import * as v from "./validation-helpers";
+
+export const validatingPrompt =
+    async (test? : (s : string) => boolean) : Promise<string> => {
+        test = test || v.isValidUsername;
+        let name = await basicPrompt();
+        let count = 5;
+        while (!test(name) && count-- > 0) {
+            name = await basicPrompt("Invalid username, choose again");
+        }
+        if (!test(name)) {
+            throw new Error("Out of tries.");
+        }
+        return name;
+    };
+
+export const run = async () : Promise<void> => {
+    const name = await validatingPrompt();
+    hello(name);
+    for (const n of getDirtyData()) {
+        hello(n);
+        goodbye(n);
+    }
+};
+#+END_SRC
+
+#+BEGIN_SRC check :module validate-at-input-site
+hello: |
+  _.isString
+bye: |
+  _.isString
+#+END_SRC
+
+
+#+BEGIN_SRC ts :module refine-the-type :error runtime
+import {validatingPrompt} from "./validate-at-input-site";
+import {getDirtyData} from "./dirty-data";
+import * as v from "./validation-helpers";
+
+export class Username {
+    private constructor(public readonly value : string) {}
+
+    static is(name : string) : boolean {
+        return v.isValidUsername(name);
+    }
+
+    static mk(name : string) : Username {
+        if (!Username.is(name)) {
+            throw new Error(`Invalid username ${name}.`);
+        }
+        return new Username(name);
+    }
+}
+
+export const refinedPrompt = async () : Promise<Username> => {
+    const name = await validatingPrompt(Username.is);
+    return Username.mk(name);
+};
+
+export const hello = (name : Username) : void =>
+    $gt.log("hello", name.value);
+
+export const goodbye = (name : Username) : void =>
+    $gt.log("bye", name.value);
+
+export const getData = () : Array<Username> =>
+    getDirtyData().filter(Username.is).map(Username.mk);
+
+export const run = async () : Promise<void> => {
+    const name = await refinedPrompt();
+    hello(name);
+    for (const n of getData()) {
+        hello(n);
+        goodbye(n);
+    }
+};
+#+END_SRC
+
+Where next?
+- Either or Validation for validated construction of a refined type
+- Safe strings for safe interpolation
+- General tag type for easy refined type creation

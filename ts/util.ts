@@ -28,18 +28,23 @@ export const assertNever = (a : never) : never => {
 export const unTs = (path : string) : string =>
     path.endsWith(".ts") ? path.slice(0, path.length - 3) : path;
 
+export const addTs = (path : string) : string =>
+    path.endsWith(".ts") ? path : `${path}.ts`;
+
 export const lastSegment = (path : string) : string => {
     const segs = path.split("/");
     return segs[segs.length - 1];
 };
 
-export const inIdleTime = (task : Iterator<void>) : void =>
+export const inIdleTime = (task : () => IterableIterator<void>) : void => {
+    const iter = task();
     requestIdleCallback(deadline => {
         let done = false;
         while (deadline.timeRemaining() > 0 && !done) {
-            done = task.next().done;
+            done = iter.next().done;
         }
         if (!done) {
-            inIdleTime(task);
+            inIdleTime(() => iter);
         }
     });
+}
