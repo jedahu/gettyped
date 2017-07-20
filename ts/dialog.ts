@@ -8,8 +8,7 @@ vex.defaultOptions.className = "vex-theme-plain";
 export const prompt =
     async (
         message : string,
-        placeholder? : string,
-        defaultValue? : string
+        placeholder? : string
     ) : Promise<string | undefined> =>
     new Promise<string | undefined>((res, rej) => {
         try {
@@ -17,7 +16,7 @@ export const prompt =
                 message,
                 placeholder,
                 buttons: [vex.dialog.buttons.YES],
-                callback: (val? : string) => res(val || defaultValue)
+                callback: res
             });
         }
         catch (e) {
@@ -25,7 +24,7 @@ export const prompt =
         }
     });
 
-type AlertOpts = string | {
+export type AlertOpts = string | {
     title? : string;
     message : string | HTMLElement | Array<HTMLElement>;
 };

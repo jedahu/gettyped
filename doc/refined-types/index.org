@@ -1,13 +1,13 @@
 #+TITLE: Refine existing types
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-19 Wed]
+#+DATE: [2017-07-20 Thu]
 
 
 When the type you have at hand is not precise enough, refine it with a
 predicate.
 
-#+BEGIN_SRC ts :module dirty-data :hide t
+#+BEGIN_SRC ts :module dirty-data :invisible t
 const randomAnimal = () : string =>
     $gt.animals[$gt.randomInt(0, $gt.animals.length)];
 
@@ -21,8 +21,8 @@ const randomAnimals = () : string => {
         xs.push(randomAnimal());
     }
     const s = xs.join(" ");
-    const space = $gt.randomInt(-1, 1);
-    return space === 0
+    const space = $gt.randomInt(0, 4);
+    return space < 4
         ? s
         : randomSpace() + s + randomSpace();
 }
@@ -37,8 +37,22 @@ export const getDirtyData = () : Array<string> => {
 };
 #+END_SRC
 
-For the purpose of this example a username should be a non blank string with no
-whitespace at beginning or end.
+
+** The types are too wide
+
+In this program, user names come from two sources:
+1. a new user enters a name,
+2. a third party service returns a list of names.
+
+For the purpose of this example two things are true:
+- a valid username is a non blank string with no whitespace at beginning or end,
+- the third party service is sloppy with their output.
+
+Unfiltered names from the third party are available via the =getDirtyData=
+function from ="./dirty-data"=. Its type signature is ~() => Array<string>~.
+
+The original program blithely processes invalid names.
+
 #+BEGIN_SRC ts :module get-username
 import {getDirtyData} from "./dirty-data";
 
@@ -69,25 +83,31 @@ bye: |
   _.isString
 #+END_SRC
 
-Clearly we need some validation because...
+This is not desirable. The =hello= function must act on valid input in order for
+its message to look good (no extra spaces) and make sense.
 
+Clearly we need some validation.
 #+BEGIN_SRC ts :module validation-helpers
 export const isValidUsername = (name : string) : boolean =>
     /^\S(.*\S)?$/.test(name);
 
 export const assertValidUsername = (name : string) : void => {
-    $gt.assert(isValidUsername(name), "Invalid username");
+    $gt.assert(isValidUsername(name), `Invalid username: '${name}'.`);
 };
 #+END_SRC
 
+
+** Argument validation
+
+We can validate inside the called function.
 #+BEGIN_SRC ts :module assert-at-use-site :error runtime
 import {basicPrompt, goodbye} from "./get-username";
 import {getDirtyData} from "./dirty-data";
 import * as v from "./validation-helpers";
 
-export const hello = (name : string) : string => {
+export const hello = (name : string) : void => {
     v.assertValidUsername(name);
-    return `Hello ${name}!`;
+    $gt.log("hello", name);
 };
 
 export const run = async () : Promise<void> => {
@@ -107,29 +127,42 @@ bye: |
   _.isString
 #+END_SRC
 
+There are two problems with this:
+1. Calls to =hello= still fail (though no longer silently), and by the time the
+   error is thrown the program might not be in a position to re-show the input
+   dialog.
+2. The type system does not help us. The same validation needed to be added to
+   every function taking this kind of argument but the compiler didn't notice
+   that we didn't add it to =goodbye=.
 
-#+BEGIN_SRC ts :module validate-at-input-site :error runtime
+
+** Input validation
+
+We could instead validate the user input.
+#+BEGIN_SRC ts :module validate-at-input-site
 import {hello, goodbye, basicPrompt} from "./get-username";
 import {getDirtyData} from "./dirty-data";
 import * as v from "./validation-helpers";
 
 export const validatingPrompt =
-    async (test? : (s : string) => boolean) : Promise<string> => {
+    async (test? : (s : string) => boolean) : Promise<string | undefined> => {
         test = test || v.isValidUsername;
         let name = await basicPrompt();
         let count = 5;
         while (!test(name) && count-- > 0) {
             name = await basicPrompt("Invalid username, choose again");
         }
-        if (!test(name)) {
-            throw new Error("Out of tries.");
-        }
-        return name;
+        return test(name) ? name : undefined;
     };
 
 export const run = async () : Promise<void> => {
     const name = await validatingPrompt();
-    hello(name);
+    if (name) {
+        hello(name);
+    }
+    else {
+        await $gt.alert("Out of tries.");
+    }
     for (const n of getDirtyData()) {
         hello(n);
         goodbye(n);
@@ -144,13 +177,36 @@ bye: |
   _.isString
 #+END_SRC
 
+The type system doesn't help us here either. We didn't add validation to
+=getDirtyData= and only discovered the oversight on running the program.
 
-#+BEGIN_SRC ts :module refine-the-type :error runtime
-import {validatingPrompt} from "./validate-at-input-site";
-import {getDirtyData} from "./dirty-data";
+
+** The type is too wide
+
+=string= is not the right type for our user names. To be used safely it requires
+that all inputs and arguments be validated. This is possible but suffers from a
+lack of type system support. Forget to validate an argument? You'll find out at
+runtime. Update =isValidUsername= because you got it wrong the first time? You
+might discover at runtime that some functions were using the equally broken
+=bobsMagicValidator= instead.
+
+
+** Narrow the type
+
+A refined type is essentially a type paired with a predicate. They are tied
+together by a "smart constructor" which allows only valid instances to be
+constructed.
+
+Here is =Username=, a refinement of =string=. The constructor is private so the only
+way to create an instance is via =Username.mk= which throws on invalid input. This
+creates the compile time guarantee that all =Username= values are valid.
+
+#+BEGIN_SRC ts :module username-type
 import * as v from "./validation-helpers";
 
 export class Username {
+    "@nominal": "9cf52975-bdde-4291-a578-39f7b68dcb8d";
+
     private constructor(public readonly value : string) {}
 
     static is(name : string) : boolean {
@@ -164,10 +220,27 @@ export class Username {
         return new Username(name);
     }
 }
+#+END_SRC
 
-export const refinedPrompt = async () : Promise<Username> => {
+With this refined type no argument validation inside =hello= and =goodbye= is
+necessary. Inside those functions the argument is guaranteed to be a =Username=
+and =Username= values are guaranteed valid by construction.
+
+The type system will enforce that callers provide a =Username= argument. This
+enforcement will propagate up the call stack to the point where a =Username= is
+constructed. Much like an exception, but at compile time!
+
+If we forget to validate a =string= to a =Username= in some input (like
+=getDirtyData=), the compiler will tell us.
+
+#+BEGIN_SRC ts :module refine-the-type
+import {validatingPrompt} from "./validate-at-input-site";
+import {getDirtyData} from "./dirty-data";
+import {Username} from "./username-type";
+
+export const refinedPrompt = async () : Promise<Username | undefined> => {
     const name = await validatingPrompt(Username.is);
-    return Username.mk(name);
+    return name ? Username.mk(name) : undefined;
 };
 
 export const hello = (name : Username) : void =>
@@ -181,8 +254,14 @@ export const getData = () : Array<Username> =>
 
 export const run = async () : Promise<void> => {
     const name = await refinedPrompt();
-    hello(name);
-    for (const n of getData()) {
+    if (name) {
+        hello(name);
+    }
+    else {
+        $gt.alert("Out of tries.");
+    }
+    // for (const n of getDirtyData()) { //! toggle comments to show
+    for (const n of getData()) {         //! compiler enforcement
         hello(n);
         goodbye(n);
     }

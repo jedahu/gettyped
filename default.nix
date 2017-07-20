@@ -51,21 +51,20 @@ rec {
   mkHsBin = path: inputs: pkgs.stdenv.mkDerivation rec {
     name = baseNameOf path;
     buildInputs = [(ghcWith inputs)];
-    src = unpack-tree {} [["cp" path "hs/${name}"]];
+    src = path;
     phases = "unpackPhase buildPhase";
     buildPhase = ''
       mkdir -p "$out/bin"
       mkdir -p "tmp"
       exec ghc -O2 \
-        --make "hs/${name}/Main.hs" \
+        --make "Main.hs" \
         -odir "./tmp" \
         -hidir "./tmp" \
         -o "$out/bin/${name}"
     '';
   };
-  module-extractor = mkHsBin ./hs/extract-modules (p: [p.pandoc]);
-  # module-filter = mkHsBin "module-filter" ./generator/module-filter (p: [p.pandoc]);
-  html-filter = mkHsBin ./hs/html-filter (p: [p.pandoc p.tagsoup]);
+  module-extractor = mkHsBin ./cmd/extract-modules (p: [p.pandoc]);
+  html-filter = mkHsBin ./cmd/html-filter (p: [p.pandoc p.tagsoup]);
   node-deps = pkgs.stdenv.mkDerivation rec {
     name = "node-deps";
     src = unpack-tree {} [

@@ -26,12 +26,12 @@ const logCheck = (checks : {[k : string] : string}) => (...xs : Array<any>) : vo
     }
 };
 
-const prompt = (
-    message : string,
-    placeholder? : string,
-    defaultValue? : string
-) : Promise<string | undefined> =>
-    Promise.resolve(defaultValue);
+const prompt : $GT["prompt"] = (
+    message,
+    placeholder
+) => Promise.resolve(undefined);
+
+const alert : $GT["alert"] = () => Promise.resolve(undefined);
 
 const gtlib = (checks : {}) : $GT => Object.freeze({
     ...gt,
@@ -41,7 +41,8 @@ const gtlib = (checks : {}) : $GT => Object.freeze({
         f : (ctx : CanvasRenderingContext2D) => A
     ) : A =>
         f(mockCanvasContext),
-    prompt
+    prompt,
+    alert
 });
 
 const glob = () => globfs({gitignore: false});

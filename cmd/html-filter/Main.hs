@@ -62,12 +62,14 @@ convertModule mod attrs children =
   TagBranch "details" detailAttrs [head, rest]
   where
     hide = M.member "rundoc-hide" attrs
+    invisible = M.member "rundoc-invisible" attrs
     static = M.member "rundoc-static" attrs
     ident = M.lookup "id" attrs
     codeId = fromMaybe ("gt-module:" <> mod) ident
     head = summary mod
     openAttr = if hide then [] else [("open", "open")]
-    detailAttrs = openAttr <> [("id", codeId), ("class", "gt-module-section")]
+    displayAttr = if invisible then [("style", "display: none")] else []
+    detailAttrs = openAttr <> displayAttr <> [("id", codeId), ("class", "gt-module-section")]
     tools = TagBranch "div" [("class", "gt-module-tools")] []
     output = TagBranch "ul" [("class", "gt-module-output")] []
     summary s = TagBranch "summary" [("data-gt-module", mod)]

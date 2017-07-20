@@ -36,7 +36,7 @@ export const lastSegment = (path : string) : string => {
     return segs[segs.length - 1];
 };
 
-export const inIdleTime = (task : () => IterableIterator<void>) : void => {
+export const inIdleTime = (task : () => Iterator<void>) : void => {
     const iter = task();
     requestIdleCallback(deadline => {
         let done = false;

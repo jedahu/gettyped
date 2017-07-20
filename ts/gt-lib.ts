@@ -1,7 +1,7 @@
 import {Module} from "./types";
 import {writeLog, writeCanvas} from "./output";
 import {animals, assert, assertp, randomInt, randomFloat} from "./gt-lib-shared";
-import {prompt} from "./dialog";
+import {alert, prompt} from "./dialog";
 
 const mkCanvas =
     (m : Module) => <A>(
@@ -23,6 +23,7 @@ export const mk$GT = (m : Module) : $GT => Object.freeze({
     log: writeLog(m),
     canvas: mkCanvas(m),
     prompt,
+    alert: (message : string) => alert(message),
     animals
 });
 

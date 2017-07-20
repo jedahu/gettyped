@@ -9,6 +9,6 @@
         "noImplicitThis": true,
         "noUnusedLocals": true,
         "strictNullChecks": true,
-        "target": "es5"
+        "target": "es6"
     }
 }

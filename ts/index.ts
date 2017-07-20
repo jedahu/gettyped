@@ -3,8 +3,7 @@ import {
     objMap,
     arrayFlatMap,
     unTs,
-    lastSegment,
-    inIdleTime
+    lastSegment
 } from "./util";
 import {manageFocusOutlines} from "./focus-outline";
 import {withGtLib} from "./gt-lib";
@@ -77,7 +76,7 @@ const resizeEditors = (mods : Modules) : void => {
     };
 };
 
-const getModule = (key : string, modules : Modules) : Module =>
+const getModule = (key : string, modules : Modules) : Module | undefined =>
     modules[unTs(lastSegment(key))];
 
 const importedPaths =
@@ -93,7 +92,12 @@ const updateImports = (mod : Module) : void =>
 
 const importedModules =
     (mod : Module, modules : Modules) : Array<Module> =>
-    importedPaths(mod).map(p => getModule(p, modules));
+    arrayFlatMap(
+        importedPaths(mod),
+        p => {
+            const m = getModule(p, modules);
+            return m ? [m] : [];
+        });
 
 const transitivelyImportedModules =
     (mod : Module, modules : Modules) : Array<Module> => {
@@ -115,63 +119,17 @@ const transitivelyImportedModules =
         return deps;
     };
 
-
-const dependentModules =
-    (path : string, mods : Modules) : Array<Module> =>
-    Object.values(mods).filter(m => m.imports.includes(path));
-
-// const transitivelyDependentModules =
-//     (path : string, mods : Modules) : Array<Module> => {
-//         const deps : Array<Module> = [];
-//         const depset = new Set<string>();
-//         const go = (path : string) => {
-//             const ms = dependentModules(path, mods);
-//             for (const m of ms) {
-//                 if (!depset.has(m.path)) {
-//                     depset.add(m.path);
-//                     deps.push(m);
-//                 }
-//             }
-//             for (const m of ms) {
-//                 go(m.path);
-//             }
-//         }
-//         go(path);
-//         return deps;
-//     };
-
 const stopModuleSpinner = ({section} : {section : HTMLElement}) => {
     const spinner =
         section.getElementsByClassName("gt-editor-load-spinner")[0];
     spinner.classList.remove("gt-do-spin");
 };
 
-const refreshDependentModules = (path : string, mods : Modules) : void =>
-    inIdleTime(function*() : IterableIterator<void> {
-        const deps = dependentModules(path, mods);
-        yield;
-        for (const {editor} of deps) {
-            const pos = editor.getPosition();
-            const sel = editor.getSelection();
-            yield;
-            editor.executeEdits("force-recheck", [
-                { identifier: {major: 1, minor: 1},
-                  range: new monaco.Range(0, 0, 0, 0),
-                  text: " ",
-                  forceMoveMarkers: false
-                },
-                { identifier: {major: 1, minor: 2},
-                  range: new monaco.Range(0, 0, 0, 1),
-                  text: "",
-                  forceMoveMarkers: false
-                }
-            ]);
-            yield
-            editor.setSelection(sel);
-            editor.setPosition(pos);
-            yield;
-        }
-    });
+
+const handleDecorations = ({model} : Module) : void => {
+    const ds = model.getAllDecorations();
+    model.deltaDecorations(ds.map(d => d.id), []);
+};
 
 const getDiagnostics = async (m : Module) : Promise<Array<Diag>> => {
     const client = await getClient(m.uri);
@@ -200,12 +158,6 @@ const getDiagnosticsMap =
         }
         return dmap;
     };
-
-// const getJs = async (m : Module) : Promise<string> => {
-//     const client = await getClient(m.uri);
-//     const emitted = await client.getEmitOutput(m.uri.tostring());
-//     return emitted.outputFiles[0].text;
-// };
 
 const updateJs =
     (pageNs : string, modules : Array<Module>) : Promise<void> =>
@@ -244,9 +196,8 @@ const runModule =
                     }
                     try {
                         await updateJs(pageNs, relevant);
-                        // const src = getJs(mod);
                         for (const m of relevant) {
-                            // new Function(m.js)();
+                            // new Function(m.js) messes up source map refs
                             eval(m.js);
                         }
                         const [m] = await prequire([mod.path]);
@@ -289,7 +240,6 @@ const revertModule = (m : Module, ms : Modules) => {
 const contentChangeHandler = (m : Module, ms : Modules) => {
     resizeEditor(m);
     updateImports(m);
-    refreshDependentModules(m.path, ms);
 };
 
 const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
@@ -300,8 +250,10 @@ const handleOutputClick = (ms : Modules) => (e : MouseEvent) => {
             const {path, line, column} = data(entry);
             if (isFinite(line) && isFinite(column)) {
                 const m = getModule(path, ms);
-                m.editor.setPosition({lineNumber: line, column});
-                m.editor.focus();
+                if (m) {
+                    m.editor.setPosition({lineNumber: line, column});
+                    m.editor.focus();
+                }
             }
         }
     }
@@ -322,7 +274,6 @@ const initEditors = (config : Config) => {
         ...opts,
         noEmit: false,
         baseUrl: "/",
-        // outFile: "out.js",
         noEmitHelpers: true,
         typeRoots: [],
         allowNonTsExtensions: false,
@@ -337,6 +288,7 @@ const initEditors = (config : Config) => {
         noSemanticValidation: false,
         noSyntaxValidation: false
     });
+    mts.typescriptDefaults.setEagerModelSync(true);
     monaco.editor.defineTheme("lighter-default", {
         base: "vs",
         inherit: true,
@@ -438,6 +390,7 @@ const initEditors = (config : Config) => {
     for (const m of Object.values(modules)) {
         m.model.setValue(m.originalText);
         m.model.onDidChangeContent(() => contentChangeHandler(m, modules));
+        m.model.onDidChangeDecorations(() => handleDecorations(m));
         m.runButton.addEventListener("click", () => runModuleDisplay(config, m, modules));
         m.revertButton.addEventListener("click", () => revertModule(m, modules));
         m.output.addEventListener("click", handleOutputClick(modules));

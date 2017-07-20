@@ -16,9 +16,10 @@ declare type $GT = Readonly<{
 
     prompt : (
         message : string,
-        placeholder? : string,
-        defaultValue? : string
+        placeholder? : string
     ) => Promise<string | undefined>;
+
+    alert : (message : string) => Promise<void>;
 
     animals : ReadonlyArray<string>;
 }>;

@@ -525,7 +525,7 @@ button.material-icons {
     display: table-cell;
 }
 
-.gt-log-entry-log > .gt-log-item {
+.gt-log-item {
     white-space: pre-wrap;
 }
 
