@@ -79,7 +79,7 @@ const initEditors = (config : Config) : void => {
     const mods = array.map(([path, target]) => {
         const text = target.innerText.trim();
         const cwd = config.pageCwd;
-        const invisible = target.getAttribute("rundoc-invisible");
+        const invisible = !!target.getAttribute("rundoc-invisible");
         return Module.mk({
             path,
             cwd,
