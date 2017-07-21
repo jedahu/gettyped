@@ -2,4 +2,4 @@ import "vs/editor/editor.main";
 
 const m : typeof monaco = monaco;
 
-export = m;
+export {m as monaco};

@@ -1,8 +1,14 @@
-import * as tss from "./ts-services";
-import {Config, Diag, Module, Modules, RunRet} from "./types";
-import {html as h, text as t} from "./dom";
-import {assertNever, arrayFlatMap, addTs, lastSegment} from "./util";
+import * as array from "./array";
+import {CompileResult} from "./types";
+import {Diag} from "./types"
+import {ObjMap} from "./objmap";
+import {WriteDiagHost} from "./types";
+import {assertNever} from "./util";
+import {fromNullable} from "./option";
+import {html as h} from "./dom";
 import {mapStackTrace} from "./trace";
+import {text as t} from "./dom";
+import {tss} from "./ts-services";
 
 const unnamedTypes = [Object, String, Number, RegExp, Date];
 
@@ -32,12 +38,26 @@ const logTagInfo = (tag : LogTag) : string | null =>
         canvas: null
     })[tag];
 
-const writeToOutput =
-    (m : Module) =>
-    (tag : LogTag) =>
-    (html : Array<Node>, data? : {[k : string] : any}) => {
-        m.output.classList.remove("gt-do-close");
-        m.output.style.height = "auto";
+type OutputArgs = {
+    target : HTMLElement;
+};
+
+export class Output {
+    "@nominal" : "7cd20569-869c-4c23-87fa-82a538e82cb6";
+
+    readonly target : HTMLElement;
+
+    private constructor(a : OutputArgs) {
+        this.target = a.target;
+    }
+
+    static mk(a : OutputArgs) : Output {
+        return new Output(a);
+    }
+
+    write(tag : LogTag, html : Array<Node>, data? : {[k : string] : any}) : void {
+        this.target.classList.remove("gt-do-close");
+        this.target.style.height = "auto";
         const title = logTagInfo(tag);
         const entry =
             h("li",
@@ -50,130 +70,115 @@ const writeToOutput =
                 h("span", {}, html)
               ],
               {data});
-        m.output.appendChild(entry);
+        this.target.appendChild(entry);
     };
 
-export const writeLog = (m : Module) => (...xs : Array<any>) =>
-    writeToOutput(m)("log")(
-        arrayFlatMap(
-            xs,
-            x => [
-                h("span", {class: "gt-log-item"}, [stringify(x)]),
-                t(" ")
-            ]));
-
-const diagsHost = (pageNs : string) => ({
-    getCurrentDirectory() : string {
-        return `"/${pageNs}`;
-    },
-    getCanonicalFileName(name : string) : string {
-        return name.startsWith("/")
-            ? addTs(name)
-            : name.startsWith("./")
-            ? addTs(`/${pageNs}/${lastSegment(name)}`)
-            : name.includes("/")
-            ? addTs(`/${name}`)
-            : addTs(`/${pageNs}/${name}`);
-    },
-    getNewLine() : string {
-        return "\n";
+    writeLog(xs : Array<any>) : void {
+        this.write(
+            "log",
+            array.chain(
+                x => [
+                    h("span", {class: "gt-log-item"}, [stringify(x)]),
+                    t(" ")
+                ],
+                xs));
     }
-});
 
-export const writeDiag = (pageNs : string, m : Module) => (diag : Diag) => {
-    const pos =
-        diag.start !== undefined
-        ? m.model.getPositionAt(diag.start)
-        : undefined;
-    writeToOutput(m)(diag.diagType)([
-        h("span",
-          {class: pos ? "gt-log-goto" : ""},
-          [ h("span", {class: "gt-log-diag-message"}, [
-              tss.formatDiagnostics([diag], diagsHost(pageNs)),
-              ` (${m.path}`,
-              pos ? `:${pos.lineNumber}:${pos.column}` : "",
-              ")"
-          ]),
-          ],
-          pos
-          ? {data: {path: diag.module, line: pos.lineNumber, column: pos.column}}
-          : undefined)
-    ]);
-};
-
-export const writeRuntime = (m : Module, ms : Modules) => (err : any) => {
-    if (err instanceof Error && err.stack) {
-        writeToOutput(m)("runtime")([
-            h("span",
-              {class: "gt-log-trace"},
-              mapStackTrace(err.stack, ms))
+    writeRet(x : any) : void {
+        this.write("result", [
+            h("span", {class: "gt-log-result"}, [stringify(x, true)])
         ]);
     }
-    else if (err instanceof Error) {
-        writeToOutput(m)("runtime")([
-            h("span",
-              {class: "gt-log-trace"},
-              [ stringify(err),
-                "\n",
-                h("span",
-                  {class: "gt-log-trace-note"},
-                  ["Note: use Chrome or Firefox to enable clickable source mapped traces."])
-              ])
+
+    writeNote(s : string) : void {
+        this.write("note", [
+            h("span", {class: "gt-log-note"}, [s])
         ]);
     }
-    else {
-        writeToOutput(m)("runtime")([
-            h("span",
-              {class: "gt-log-trace"},
-              [ stringify(err),
-                "\n",
-                h("span",
-                  {class: "gt-log-trace-note"},
-                  ["Note: throw an instance of Error to enable clickable source mapped traces."])
-              ])
-        ]);
-    }
-};
 
-export const writeRet = (m : Module) => (x : any) =>
-    writeToOutput(m)("result")([
-        h("span", {class: "gt-log-result"}, [stringify(x, true)])
-    ]);
-
-export const writeNote = (m : Module) => (s : string) =>
-    writeToOutput(m)("note")([
-        h("span", {class: "gt-log-note"}, [s])
-    ]);
-
-export const writeCanvas =
-    (m : Module) => (w : number, h : number) : CanvasRenderingContext2D => {
+    writeCanvas(w : number, h : number) : CanvasRenderingContext2D {
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
-        writeToOutput(m)("canvas")([canvas]);
+        this.write("canvas", [canvas]);
         return canvas.getContext("2d") as CanvasRenderingContext2D;
-    };
+    }
 
-export const writeResult =
-    async (
-        {pageNs} : Pick<Config, "pageNs">,
-        m : Module,
-        ms : Modules,
-        x : RunRet
-    ) => {
+    writeDiag(host : WriteDiagHost, diag : Diag) : void {
+        const path = diag.module;
+        const pos =
+            fromNullable(diag.start).chain(
+                start => host.getPositionFor(path, start));
+        this.write(diag.diagType, [
+            h("span",
+              {class: pos ? "gt-log-goto" : ""},
+              [ h("span", {class: "gt-log-diag-message"}, [
+                  tss.formatDiagnostics([diag], host),
+                  ` (${path}`,
+                  pos.fold(() => "", ([l, c]) => `:${l}:${c}`),
+                  ")"
+              ]),
+              ],
+              pos.fold(
+                  () => undefined,
+                  ([line, column]) => ({data: {path, line, column}})))
+        ]);
+    }
+
+    writeRuntime(sources : ObjMap<string>, err : any) : void {
+        if (err instanceof Error && err.stack) {
+            this.write("runtime", [
+                h("span",
+                  {class: "gt-log-trace"},
+                  mapStackTrace(err.stack, sources))
+            ]);
+        }
+        else if (err instanceof Error) {
+            this.write("runtime", [
+                h("span",
+                  {class: "gt-log-trace"},
+                  [ stringify(err),
+                    "\n",
+                    h("span", {class: "gt-log-trace-note"}, [
+                        "Note: use Chrome or Firefox to enable",
+                        " clickable source mapped traces."
+                    ])
+                  ])
+            ]);
+        }
+        else {
+            this.write("runtime", [
+                h("span",
+                  {class: "gt-log-trace"},
+                  [ stringify(err),
+                    "\n",
+                    h("span", {class: "gt-log-trace-note"}, [
+                        "Note: throw an instance of Error to",
+                        " enable clickable source mapped traces."
+                    ])
+                  ])
+            ]);
+        }
+    }
+
+    async writeResult(
+        sources : ObjMap<string>,
+        host : WriteDiagHost,
+        x : CompileResult
+    ) : Promise<void> {
         if (x.tag === "diagnostics") {
-            writeNote(m)("Compile failed");
+            this.writeNote("Compile failed");
             for (const diag of x.val) {
-                writeDiag(pageNs, m)(diag)
+                this.writeDiag(host, diag)
             }
         }
         else if (x.tag === "run") {
             const [tag, val] = await x.val;
             if (tag === "runtime") {
-                writeRuntime(m, ms)(val);
+                this.writeRuntime(sources, val);
             }
             else if (tag === "value") {
-                writeRet(m)(val);
+                this.writeRet(val);
             }
             else {
                 assertNever(tag);
@@ -182,16 +187,5 @@ export const writeResult =
         else {
             assertNever(x);
         }
-    };
-
-export const clearOutput = (m : Module) => {
-    m.output.style.height = `${m.output.offsetHeight}px`;
-    m.output.innerText = "";
-    // const children = [].slice.call(m.output.childNodes);
-    setTimeout(() => m.output.classList.add("gt-do-close"));
-    // setTimeout(() => {
-    //     for (const c of children) {
-    //         c.remove();
-    //     }
-    // }, 300);
-};
+    }
+}

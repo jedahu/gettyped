@@ -1647,6 +1647,10 @@ formatio@1.1.1:
   dependencies:
     samsam "~1.1"
 
+fp-ts@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/fp-ts/-/fp-ts-0.4.0.tgz#5ee9ca4e9e4aa4ad7ac0ac596790c8ac0601757d"
+
 fragment-cache@^0.2.0, fragment-cache@^0.2.1:
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/fragment-cache/-/fragment-cache-0.2.1.tgz#4290fad27f13e89be7f33799c6bc5a0abfff0d19"

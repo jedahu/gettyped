@@ -1,5 +1,5 @@
 import {tsconfig} from "./config";
-import * as tss from "./ts-services";
+import {tss} from "./ts-services";
 
 export const getTsOpts = () => tss.parseJsonConfigFileContent(
     tsconfig,

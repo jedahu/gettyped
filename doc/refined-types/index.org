@@ -1,7 +1,7 @@
 #+TITLE: Refine existing types
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-20 Thu]
+#+DATE: [2017-07-22 Sat]
 
 
 When the type you have at hand is not precise enough, refine it with a
@@ -49,7 +49,7 @@ For the purpose of this example two things are true:
 - the third party service is sloppy with their output.
 
 Unfiltered names from the third party are available via the =getDirtyData=
-function from ="./dirty-data"=. Its type signature is ~() => Array<string>~.
+function from =./dirty-data=. Its type signature is ~() => Array<string>~.
 
 The original program blithely processes invalid names.
 

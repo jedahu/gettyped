@@ -1,5 +1,4 @@
-import {Module} from "./types";
-import {writeLog, writeCanvas} from "./output";
+import {Module} from "./module";
 import {animals, assert, assertp, randomInt, randomFloat} from "./gt-lib-shared";
 import {alert, prompt} from "./dialog";
 
@@ -12,15 +11,19 @@ const mkCanvas =
             typeof size === "number"
             ? [size, size]
             : size;
-        return f(writeCanvas(m)(width, height));
+        return f(m.output.writeCanvas(width, height));
     };
+
+const mkLog =
+    (m : Module) => (...xs : Array<any>) =>
+    m.output.writeLog(xs);
 
 export const mk$GT = (m : Module) : $GT => Object.freeze({
     assert,
     assertp,
     randomInt,
     randomFloat,
-    log: writeLog(m),
+    log: mkLog(m),
     canvas: mkCanvas(m),
     prompt,
     alert: (message : string) => alert(message),

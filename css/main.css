@@ -516,6 +516,18 @@ button.material-icons {
     color: #7989e7;
 }
 
+.gt-action-run::after {
+    content: 'play_circle_filled';
+}
+
+.gt-action-revert::after {
+    content: 'restore';
+}
+
+.gt-action-clear::after {
+    content: 'clear';
+}
+
 .gt-module-output .gt-log-special {
     color: #2ea22e;
 }
@@ -596,11 +608,11 @@ button.material-icons {
 
 /* * Spinner */
 
-.gt-run-spinner {
-    animation: gt-run-spinner 1s infinite linear;
+.gt-action-run.gt-do-spin {
+    animation: gt-just-spin 1s infinite linear;
 }
 
-@keyframes gt-run-spinner {
+@keyframes gt-just-spin {
     0% {
         transform: rotate(0deg);
     }

@@ -1,7 +1,9 @@
+import * as array from "./array";
+import {ObjMap} from "./objmap"
 import {SourceMapConsumer} from "source-map";
-import {Module, Modules} from "./types";
 import {html as h} from "./dom";
-import {arrayFlatMap, lastSegment, unTs} from "./util";
+import {none} from "./option";
+import {some} from "./option";
 
 type TraceInfo = {
     regex : RegExp;
@@ -32,12 +34,14 @@ const getTraceInfo = () : TraceInfo | undefined =>
     isFirefox() ? firefoxInfo :
     undefined;
 
-const getSourceMap = (m : Module) : SourceMapConsumer | undefined => {
-    const js = m.js;
-    const match = js.match(/\/\/# [s]ourceMappingURL=(.*)[\s]*$/m);
+const sourceMapComment = /\/\/# [s]ourceMappingURL=(.*)[\s]*$/m;
+const sourceMapUri = /data:application\/json;(charset=[^;]+;)?base64,(.*)/;
+
+const getSourceMap = (src : string) : SourceMapConsumer | undefined => {
+    const match = src.match(sourceMapComment);
     if (match && match.length === 2) {
         const uri = match[1];
-        const smap = uri.match(/data:application\/json;(charset=[^;]+;)?base64,(.*)/);
+        const smap = uri.match(sourceMapUri);
         if (smap && smap[2]) {
             return new SourceMapConsumer(atob(smap[2]));
         }
@@ -56,7 +60,7 @@ const lineSpan = ({source, line, column} : SLC, name : string) : HTMLElement =>
     h("span",
       {class: "gt-trace-line gt-log-goto"},
       [`    at ${name} (${source}:${line}:${column + 1})\n`],
-      {data: {path: unTs(source), line, column: column + 1}});
+      {data: {path: source, line, column: column + 1}});
 
 const lineSpan0 = (text : string) : HTMLElement =>
     h("span",
@@ -85,7 +89,8 @@ const getName = (line : string) : string | undefined => {
     return match ? match[1] : undefined;
 };
 
-export const mapStackTrace = (trace : string, modules : Modules) : Array<HTMLElement> => {
+export const mapStackTrace =
+    (trace : string, sources : ObjMap<string>) : Array<HTMLElement> => {
     const info = getTraceInfo();
     const lines = trace.split("\n");
     if (!info) {
@@ -94,19 +99,28 @@ export const mapStackTrace = (trace : string, modules : Modules) : Array<HTMLEle
     const msg = lines.slice(0, info.skip);
     const stack = lines.slice(info.skip);
     return msg.map(lineSpan0).concat(
-        arrayFlatMap(stack, x => {
-            const fields = x.match(info.regex);
-            if (fields && fields.length === info.fields + 1) {
-                const [,, uri, ln, cn] = fields;
-                if (/https?:\/\//.test(uri)) {
-                    return [];
+        array.mapOption(
+            x => {
+                const fields = x.match(info.regex);
+                if (fields && fields.length === info.fields + 1) {
+                    const [,, uri, ln, cn] = fields;
+                    if (/https?:\/\//.test(uri)) {
+                        return none;
+                    }
+                    const line = parseInt(ln, 10);
+                    const column = parseInt(cn, 10);
+                    const src = sources[uri];
+                    const name = getName(x) || "(unknown)";
+                    return some(
+                        renderLine(
+                            uri,
+                            line,
+                            column,
+                            name,
+                            src ? getSourceMap(src) : undefined
+                        ));
                 }
-                const line = parseInt(ln, 10);
-                const column = parseInt(cn, 10);
-                const m = modules[unTs(lastSegment(uri))];
-                const name = getName(x) || "(unknown)";
-                return [renderLine(uri, line, column, name, m ? getSourceMap(m) : undefined)];
-            }
-            return [];
-        }));
+                return none;
+            },
+            stack));
 };

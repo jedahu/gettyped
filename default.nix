@@ -130,14 +130,15 @@ rec {
     name = "gettyped-page-html";
     phases = "buildPhase";
     buildInputs = [pandoc html-filter];
-    page-ns = baseNameOf (dirOf absPath);
+    page-name = baseNameOf (dirOf absPath);
+    page-cwd = if page-name == "doc" then "/" else "/" + page-name;
     buildPhase = ''
       mkdir -p "$out${path}"
       pandoc -f org -t html5 --smart \
         -V site-root=${config.siteRoot} \
         -V main-js=${main-js} \
-        -V page-ns=${page-ns} \
-        ${if page-ns == "doc" then "" else ''\
+        -V page-cwd=${page-cwd} \
+        ${if page-name == "doc" then "" else ''\
           -V is-post=1 \
           --toc \
         ''} \
@@ -147,7 +148,8 @@ rec {
         --standalone \
         --template "${./template/page.html}" \
         "${absPath}" \
-        | html-filter >"$out${path}/index.html"
+        | html-filter \
+        >"$out${path}/index.html"
   '';
   };
   page-modules = absPath: pkgs.stdenv.mkDerivation {

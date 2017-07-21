@@ -8,11 +8,16 @@
             "dom",
             "dom.iterable"
         ],
-        "typeRoots": ["./d"],
-        "types": ["requirejs"],
         "allowJs": true,
         "module": "amd",
-        "outFile": "../built.js"
+        "moduleResulution": "node",
+        "outFile": "../built.js",
+        "typeRoots": ["./d"],
+        "types": ["requirejs", "fp-ts"],
+        "baseUrl": ".",
+        "paths": {
+            "fp-ts/*": ["../node_modules/fp-ts/*"]
+        }
     },
     "include": [
         "./d/*.d.ts",

@@ -24,7 +24,7 @@ declare module "vex-js" {
 }
 
 declare module "vex-dialog" {
-    const x : any; 
+    const x : any;
     export = x;
 }
 

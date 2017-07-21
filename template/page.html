@@ -57,7 +57,7 @@ $body$
          (function() {
              hljs.initHighlightingOnLoad();
              const config = {
-                 pageNs: "$page-ns$"
+                 pageCwd: "$page-cwd$"
              };
              require(["GetTyped"], function(m) { m.init(config); });
          })();

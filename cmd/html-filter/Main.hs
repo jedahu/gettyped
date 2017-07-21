@@ -59,7 +59,7 @@ convert t = [t]
 
 convertModule :: Text -> M.Map Text Text -> [TagTree Text] -> TagTree Text
 convertModule mod attrs children =
-  TagBranch "details" detailAttrs [head, rest]
+  TagBranch "details" detailAttrs [head, code]
   where
     hide = M.member "rundoc-hide" attrs
     invisible = M.member "rundoc-invisible" attrs
@@ -70,17 +70,9 @@ convertModule mod attrs children =
     openAttr = if hide then [] else [("open", "open")]
     displayAttr = if invisible then [("style", "display: none")] else []
     detailAttrs = openAttr <> displayAttr <> [("id", codeId), ("class", "gt-module-section")]
-    tools = TagBranch "div" [("class", "gt-module-tools")] []
-    output = TagBranch "ul" [("class", "gt-module-output")] []
     summary s = TagBranch "summary" [("data-gt-module", mod)]
                 [ TagBranch "span" [("class", "gt-module-title")]
                   [ TagLeaf (TagText (s <> ".ts")) ]
                 , TagBranch "i" [("class", "gt-less-more material-icons md-24 md-dark")] []
-                , TagBranch "span" [("class", "gt-editor-load-spinner")]
-                  [ TagBranch "i" [] []
-                  , TagBranch "i" [] []
-                  , TagBranch "i" [] []
-                  ]
                 ]
     code = TagBranch "pre" (M.toList attrs) children
-    rest = TagBranch "div" [] (code : (if static then [] else [tools, output]))

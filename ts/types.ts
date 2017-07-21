@@ -1,34 +1,22 @@
+import {FilePath} from "./path";
+import {Option} from "./option";
+
+import Editor = monaco.editor.IStandaloneCodeEditor;
+import Model = monaco.editor.IModel;
+import Uri = monaco.Uri;
+export {Uri, Editor, Model};
+
 export type Config = {
-    pageNs: string;
+    pageCwd: string;
 };
-
-export type Editor = monaco.editor.IStandaloneCodeEditor;
-export type Model = monaco.editor.IModel;
-
-export type Module = {
-    editor : Editor;
-    model : Model;
-    name : string;
-    path : string;
-    uri : monaco.Uri;
-    imports : Array<string>;
-    originalText : string;
-    section: HTMLElement;
-    container : HTMLElement;
-    runButton : HTMLElement;
-    revertButton : HTMLElement;
-    clearButton : HTMLElement;
-    output : HTMLElement;
-    js : string;
-};
-
-export type Modules = {[path : string] : Module};
 
 export type DiagType = "syntax" | "types";
 export type Diag = ts.Diagnostic & {
     diagType : DiagType;
-    module : string;
+    module : FilePath;
 };
+
+export type DiagMap = {[absPath : string] : Array<Diag>};
 
 export type DiagInfo = {
     module : string;
@@ -37,8 +25,18 @@ export type DiagInfo = {
     position? : {line : number; column : number;}
 };
 
-export type RunRet =
+export type WriteDiagHost = ts.FormatDiagnosticsHost & {
+    getPositionFor(path : string, start : number) : Option<[number, number]>;
+};
+
+export type CompileResult =
     {tag : "diagnostics"; val : Array<Diag>}
     | {tag : "run"; val : Promise<["value"|"runtime", any]>};
+
+export type RunRet = {
+    result : CompileResult;
+    sources : ObjMap<string>;
+    host : WriteDiagHost;
+};
 
 export type ObjMap<A> = {[k : string] : A};
