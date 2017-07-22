@@ -59,7 +59,7 @@ convert t = [t]
 
 convertModule :: Text -> M.Map Text Text -> [TagTree Text] -> TagTree Text
 convertModule mod attrs children =
-  TagBranch "details" detailAttrs [head, code]
+  TagBranch "section" detailAttrs [head, code]
   where
     hide = M.member "rundoc-hide" attrs
     invisible = M.member "rundoc-invisible" attrs
@@ -67,12 +67,17 @@ convertModule mod attrs children =
     ident = M.lookup "id" attrs
     codeId = fromMaybe ("gt-module:" <> mod) ident
     head = summary mod
-    openAttr = if hide then [] else [("open", "open")]
+    closed = if hide then " gt-expander-closed" else ""
     displayAttr = if invisible then [("style", "display: none")] else []
-    detailAttrs = openAttr <> displayAttr <> [("id", codeId), ("class", "gt-module-section")]
-    summary s = TagBranch "summary" [("data-gt-module", mod)]
-                [ TagBranch "span" [("class", "gt-module-title")]
-                  [ TagLeaf (TagText (s <> ".ts")) ]
-                , TagBranch "i" [("class", "gt-less-more material-icons md-24 md-dark")] []
+    detailAttrs = displayAttr
+                  <>
+                  [ ("id", codeId)
+                  , ("class", "gt-module-section gt-expander" <> closed)
+                  ]
+    summary s = TagBranch "h6"
+                [ ("class", "gt-module-title gt-expander-toggle")
+                , ("data-gt-module", mod)
                 ]
-    code = TagBranch "pre" (M.toList attrs) children
+                [ TagBranch "span" [] [TagLeaf (TagText (s <> ".ts"))] ]
+    code = TagBranch "div" [("class", "gt-module-insides gt-expander-content")]
+           [ TagBranch "pre" (M.toList attrs) children ]

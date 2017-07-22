@@ -5,10 +5,13 @@ import {Config} from "./types";
 import {Module} from "./module";
 import {Page} from "./page";
 import {addTs} from "./path";
+import {dataset} from "./dom";
 import {getTsOpts} from "./tsconfig";
+import {html as h} from "./dom";
 import {manageFocusOutlines} from "./focus-outline";
 import {monaco} from "./monaco";
 import {pair} from "./pair";
+import {setDataset} from "./dom";
 import {siteRoot, scrollbarSize} from "./config";
 
 const fetchText = (url : string) : Promise<string> =>
@@ -60,7 +63,7 @@ const initEditors = (config : Config) : void => {
         });
     }
 
-    const sections =
+    const blocks =
         array.mapOption(
             target => {
                 const path = target.getAttribute("rundoc-module");
@@ -76,8 +79,8 @@ const initEditors = (config : Config) : void => {
                 document.querySelectorAll(
                     "[rundoc-language='ts'][rundoc-module]")));
 
-    const mods = array.map(([path, target]) => {
-        const text = target.innerText.trim();
+    const modules = array.map(([path, target]) => {
+        const text = (target.textContent || "").trim();
         const cwd = config.pageCwd;
         const invisible = !!target.getAttribute("rundoc-invisible");
         return Module.mk({
@@ -90,16 +93,65 @@ const initEditors = (config : Config) : void => {
             editorOnly: true,
             invisible
         });
-    }, sections);
+    }, blocks);
 
     (window as any).__gtPage = Page.mk({
         cwd: config.pageCwd,
-        modules: mods
+        modules
     });
 };
 
 export const init = (config : Config) => {
     manageFocusOutlines(document, "visible-focus-outline");
+
+    const expanderToggle = (exp : Element) => () : void => {
+        const content = exp.querySelector(".gt-expander-content");
+        if (!(content instanceof HTMLElement)) return;
+        if (exp.classList.contains("gt-expander-closed")) {
+            const {height} = dataset(content);
+            requestAnimationFrame(() => {
+                exp.classList.remove("gt-expander-closed");
+                content.style.height = `${height}px`;
+            });
+        }
+        else {
+            if (content instanceof HTMLElement) {
+                const height = content.offsetHeight;
+                setDataset(content, {height});
+                content.style.height = `${height}px`;
+                requestAnimationFrame(
+                    () => exp.classList.add("gt-expander-closed"));
+            }
+        }
+    };
+
+    const heightToAuto = (e : TransitionEvent) : void => {
+        if (e.target instanceof HTMLElement) {
+            e.target.style.height = "";
+        }
+    };
+
+    for (const exp of document.querySelectorAll(".gt-expander")) {
+        if (exp) {
+            const tog = exp.querySelector(".gt-expander-toggle");
+            if (tog) {
+                tog.addEventListener("click", expanderToggle(exp));
+                tog.appendChild(h("i", {
+                    class: "gt-less-more material-icons md-24 md-dark"
+                }));
+            }
+            const content = exp.querySelector(".gt-expander-content");
+            if (content instanceof HTMLElement) {
+                content.addEventListener("transitionend", heightToAuto);
+                const child = content.firstElementChild;
+                if (child instanceof HTMLElement) {
+                    setDataset(content, {height: child.offsetHeight});
+                }
+            }
+        }
+    }
+
+
     const editToggle = document.querySelector(".gt-edit-toggle");
     if (localStorage.getItem("gt-edit-toggle-on")) {
         requestIdleCallback(() => {

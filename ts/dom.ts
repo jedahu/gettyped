@@ -51,7 +51,7 @@ export const html = (
     return elem;
 };
 
-export const data = (elem : HTMLElement) : {[k : string] : any} => {
+export const dataset = (elem : HTMLElement) : {[k : string] : any} => {
     const x : {[k : string] : any} = {};
     for (const [k, v] of Object.entries(elem.dataset)) {
         if (k.startsWith(dataPrefix) && v) {
@@ -59,4 +59,10 @@ export const data = (elem : HTMLElement) : {[k : string] : any} => {
         }
     }
     return x;
+};
+
+export const setDataset = (elem : HTMLElement, ds : {[k : string] : any}) => {
+    for (const [k, v] of Object.entries(ds)) {
+        elem.dataset[`${dataPrefix}${k}`] = JSON.stringify(v);
+    }
 };

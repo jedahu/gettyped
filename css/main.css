@@ -247,7 +247,7 @@ table td {
     text-align: center;
 }
 
-details > summary {
+.gt-module-section .gt-module-title {
     cursor: pointer;
 }
 
@@ -411,34 +411,41 @@ body > nav > .gt-more-link {
     text-align: right;
 }
 
-.gt-toc > details > summary > i::after {
+.gt-toc .gt-toc-title i::after {
     content: 'expand_more';
 }
 
-.gt-toc > details[open] > summary > i::after {
-    content: 'expand_less';
-}
-
-.gt-toc > details[open] > ul {
+.gt-toc ul {
     margin-top: 0;
 }
 
-summary {
-    display: inline-flex;
+.gt-module-section .rundoc-block {
+    margin: 0;
+}
+
+.gt-module-title {
+    margin: 0 auto;
+}
+
+.gt-less-more {
     vertical-align: middle;
-    align-items: flex-end;
 }
 
-summary::-webkit-details-marker {
-    display: none;
+.gt-less-more::after {
+    content: 'expand_less';
 }
 
-summary > .gt-less-more::after {
+.gt-expander-closed .gt-less-more::after {
     content: 'expand_more';
 }
 
-details[open] > summary > .gt-less-more::after {
-    content: 'expand_less';
+.gt-expander-content {
+    transition: height 0.2s linear;
+    overflow-y: hidden;
+}
+
+.gt-expander-closed .gt-expander-content {
+    height: 0 !important;
 }
 
 .gt-editor-load-spinner.gt-do-spin > i::after {
@@ -463,27 +470,23 @@ details[open] > summary > .gt-less-more::after {
     100% { opacity: 0.2 }
 }
 
-details.gt-module-section[open] {
+.gt-module-section .gt-module-insides {
     margin-bottom: 3em;
 }
 
-details.gt-module-section[open] pre {
-    margin: 0 0 0 1px;
-}
-
-details.gt-module-section[open] > summary + * {
+.gt-module-section .gt-module-insides {
     border-left: 0.4em solid #c1c6e2;
     margin-top: 0.5em;
 }
 
-details.gt-module-section > summary {
+.gt-module-section .gt-module-title {
     font-family: 'Droid Sans Mono', monospace;
     font-size: 14px;
     color: #4255bd;
     width: 100%;
 }
 
-details.gt-module-section > div {
+.gt-module-section  .gt-module-insides {
     background-color: #f0f0f0;
 }
 
@@ -630,4 +633,8 @@ button.material-icons {
 html.visible-focus-outline :focus {
     outline: currentColor dotted thin;
     outline: 5px auto -webkit-focus-ring-color;
+}
+
+code.hljs {
+    padding: 0 0.5em;
 }

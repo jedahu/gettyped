@@ -7,14 +7,10 @@ import {ModulePath} from "./path";
 import {Output} from "./output";
 import {RunRet} from "./types";
 import {Uri} from "./types";
-import {filter} from "fp-ts/lib/Filterable";
-import {fromNullable} from "./option";
 import {getClient} from "./ts-services";
 import {html as h} from "./dom";
-import {option} from "./option";
 import {tss} from "./ts-services"
 import {unTs} from "./path";
-import {whenSome} from "./option";
 
 export type EditorOpts = {
     scrollbarSize : number;
@@ -218,16 +214,6 @@ export class Module {
 
         this.targets.toolbar.clear.
             addEventListener("click", () => this.clearOutput());
-
-        const summary =
-            filter(option)(
-                x => x.tagName.toLowerCase() === "summary",
-                fromNullable(this.targets.editorContainer.closest("details")).
-                    chain(d => fromNullable(d.firstElementChild)));
-
-        whenSome(
-            s => s.addEventListener("click", () => this.resizeEditor()),
-            summary);
     }
 
     static mk(a : ModuleArgs) : Module {

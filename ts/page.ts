@@ -7,7 +7,7 @@ import {Module} from "./module";
 import {Option} from "./option";
 import {RunRet} from "./types";
 import {WriteDiagHost} from "./types";
-import {data} from "./dom";
+import {dataset} from "./dom";
 import {flatten} from "fp-ts/lib/Chain";
 import {fromNullable} from "./option";
 import {normaliseTsPath} from "./path";
@@ -203,7 +203,7 @@ export class Page {
         if (elem instanceof Element) {
             const entry = elem.closest(".gt-log-goto");
             if (entry instanceof HTMLElement) {
-                const {path, line, column} = data(entry);
+                const {path, line, column} = dataset(entry);
                 if (isFinite(line) && isFinite(column)) {
                     whenSome(
                         m => {
