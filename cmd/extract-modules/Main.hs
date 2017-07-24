@@ -1,19 +1,28 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Main where
 
-import qualified GHC.IO.Encoding as E
+import Prelude (error)
+import Control.Applicative
+import Control.Monad
+import Data.Bool
+import Data.Either
+import Data.Eq
+import Data.Maybe
+import Data.Semigroup
+import Data.String
+import Data.Witherable
 import System.Directory
 import System.Environment
 import System.Exit
-import Control.Applicative
-import Control.Monad
-import qualified Data.Map as M
-import Data.Either
-import Data.Semigroup
 import System.FilePath.Posix
+import System.IO
 import Text.Pandoc
 import Text.Pandoc.Definition
 import Text.Pandoc.Options
 import Text.Pandoc.Walk
+import Text.Show
+import qualified Data.Map as M
+import qualified GHC.IO.Encoding as E
 
 data ErrorKind = None | Runtime | Static
 
@@ -28,18 +37,23 @@ moduleQuery = query go
         then []
         else
           let lang      = M.lookup "rundoc-language" attrs
-              module_   = M.lookup "rundoc-module" attrs
+              module_   = join (M.lookup <$> moduleAttr lang <*> Just attrs)
               file      = M.lookup "rundoc-file" attrs
               err       = errKind (M.lookup "rundoc-error" attrs)
               f         = ((,,) code) <$> file <*> Just err
-              m         = mkML code <$> module_ <*> (suffix <$> lang) <*> Just err
+              m         = mkML code <$> module_ <*> suffix lang <*> Just err
           in maybe [] (:[]) (f <|> m)
     go _ = []
 
-    mkML c m s e = (c, m ++ "." ++ s, e)
+    mkML c m s e = (c, m <> "." <> s, e)
 
-    suffix "ts" = "ts"
-    suffix "check" = "ts.check"
+    moduleAttr (Just "ts")   = Just "rundoc-module"
+    moduleAttr (Just "yaml") = Just "rundoc-check-module"
+    moduleAttr _             = Nothing
+
+    suffix (Just "ts")   = Just "ts"
+    suffix (Just "yaml") = Just "ts.check"
+    suffix _             = Nothing
 
     errKind (Just "runtime") = Runtime
     errKind (Just "static")  = Static

@@ -1,7 +1,7 @@
 #+TITLE: Catch simple mistakes early
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-18 Tue]
+#+DATE: [2017-07-24 Mon]
 
 
 Here is an untyped implementation of a function that draws a square on a canvas
@@ -35,7 +35,7 @@ export const run = () => {
 };
 #+END_SRC
 
-#+BEGIN_SRC check :module square0
+#+BEGIN_SRC yaml :check-module square0
 square: |
   {
     colour: _.isNumber,
@@ -63,7 +63,7 @@ export const run = () => {
 };
 #+END_SRC
 
-#+BEGIN_SRC check :module square1
+#+BEGIN_SRC yaml :check-module square1
 square: |
   {
     colour: _.isNumber,
@@ -90,7 +90,7 @@ import {square0} from "./square0";
 export const run = () => square0(25, "red");
 #+END_SRC
 
-#+BEGIN_SRC check :module wrong-arity0
+#+BEGIN_SRC yaml :check-module wrong-arity0
 $result: |
   {
     colour: _.isNumber,
@@ -117,7 +117,7 @@ import {square0} from "./square0";
 export const run = () => square0({size: 9});
 #+END_SRC
 
-#+BEGIN_SRC check :module bad-arguments0
+#+BEGIN_SRC yaml :check-module bad-arguments0
 $result: |
   {
     color: _.isNumber,

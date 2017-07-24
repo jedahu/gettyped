@@ -63,7 +63,7 @@ rec {
         -o "$out/bin/${name}"
     '';
   };
-  module-extractor = mkHsBin ./cmd/extract-modules (p: [p.pandoc]);
+  module-extractor = mkHsBin ./cmd/extract-modules (p: [p.pandoc p.witherable]);
   html-filter = mkHsBin ./cmd/html-filter (p: [p.pandoc p.tagsoup]);
   node-deps = pkgs.stdenv.mkDerivation rec {
     name = "node-deps";

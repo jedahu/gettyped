@@ -76,7 +76,7 @@ export const run = async () : Promise<void> => {
 };
 #+END_SRC
 
-#+BEGIN_SRC check :module get-username
+#+BEGIN_SRC yaml :check-module get-username
 hello: |
   _.isString
 bye: |
@@ -120,7 +120,7 @@ export const run = async () : Promise<void> => {
 };
 #+END_SRC
 
-#+BEGIN_SRC check :module assert-at-use-site
+#+BEGIN_SRC yaml :check-module assert-at-use-site
 hello: |
   _.isString
 bye: |
@@ -170,7 +170,7 @@ export const run = async () : Promise<void> => {
 };
 #+END_SRC
 
-#+BEGIN_SRC check :module validate-at-input-site
+#+BEGIN_SRC yaml :check-module validate-at-input-site
 hello: |
   _.isString
 bye: |
