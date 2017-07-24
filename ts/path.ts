@@ -1,39 +1,40 @@
-import {IsRefined} from "./refined";
+import * as RT from "./refined";
+import {Nil} from "./refined";
 import {Refined} from "./refined";
-import {isRefined} from "./refined";
+import {Refinement} from "./refined";
 import {liftUnsafe} from "./refined";
-import {lift} from "./refined";
-import {refine} from "./refined";
-import {tag} from "./refined";
 
-export const enum _Path {}
-export const enum _TsFile {}
-export const enum _TsModule {}
-export const enum _Abs {}
+const enum _Path {}
+const enum _TsFile {}
+const enum _TsModule {}
+const enum _Abs {}
 
-export type Path<R = {}> = Refined<string, R & _Path>;
+export class FilePath extends Refinement<string> {
+    "@nominal" : _Path;
+    test = (a : string) => true;
+}
 
-export const isTsFile : IsRefined<string, _Path & _TsFile> =
-    isRefined("TsFile", p => p.endsWith(".ts"));
+export class TsFile extends Refinement<string> {
+    "@nominal" : _TsFile
+    test = (a : string) => a.endsWith(".ts");
+}
 
-export const isTsModule : IsRefined<string, _Path & _TsModule> =
-    isRefined("TsModule", p => !p.endsWith(".ts"));
+export class TsModule extends Refinement<string> {
+    "@nominal" : _TsModule;
+    test = (a : string) => !a.endsWith(".ts");
+}
 
-export const isAbs : IsRefined<string, _Path & _Abs> =
-    isRefined("Abs", p => p.startsWith("/"))
+export class Abs extends Refinement<string> {
+    "@nominal" : _Abs;
+    test = (a : string) => a.startsWith("/");
+}
 
-export const path = tag<string, _Path>();
-
-export const tsFilePath = refine(isTsFile);
-
-export const tsModulePath = refine(isTsModule);
-
-export const absPath = refine(isAbs);
+export type Path<A = Nil> = Refined<string, FilePath & A>;
 
 export const join = (p : Path, ...ps : Array<Path>) : Path => {
     let out : string = p;
     for (const p of ps) {
-        if (isAbs(p)) {
+        if (RT.guard(p, Abs)) {
             out = p;
         }
         else {
@@ -42,32 +43,32 @@ export const join = (p : Path, ...ps : Array<Path>) : Path => {
             out = `${a}/${b}`;
         }
     }
-    return path(lift(out));
+    return RT.lift(out, FilePath);
 };
 
-export const absJoin = (p : Path<_Abs>, ...ps : Array<Path>) : Path<_Abs> =>
-    absPath(join(p, ...ps));
+export const absJoin = (p : Path<Abs>, ...ps : Array<Path>) : Path<Abs> =>
+    RT.liftSum(join(p, ...ps), Abs);
 
 export const trimExt = <A extends string>(p : Path, ext : A) : Path =>
-    path(lift(p.substring(0, p.length - ext.length)));
+    RT.lift(p.substring(0, p.length - ext.length), FilePath);
 
 export const removeTs =
-    <R>(p : Path<R & _TsFile>) : Path<R & _TsModule> =>
-    tsModulePath(liftUnsafe<string, R>(trimExt(p, ".ts")));
+    <R>(p : Path<TsFile & R>) : Path<R> =>
+    RT.liftSum(liftUnsafe<string, R>(trimExt(p, ".ts")), FilePath);
 
-export const addTs = <R>(p : Path<_TsModule & R>) : Path<_TsFile & R> =>
-    tsFilePath(liftUnsafe<string, R>(`${p}.ts`));
+export const addTs = <R>(p : Path<R> | Path<TsModule & R>) : Path<TsFile & R> =>
+    RT.liftSum(liftUnsafe<string, R>(`${p}.ts`), FilePath, TsFile);
 
-export const ensureNoTs = <R>(p : Path<R> | Path<R>) : Path<R> =>
-    isTsFile(p)
+export const ensureNoTs = <R>(p : Path<R> | Path<TsModule & R>) : Path<R> =>
+    RT.guardSum(p, TsFile)
     ? removeTs(p)
-    : tsModulePath(p);
+    : p;
 
 export const ensureTs =
-    <R>(p : Path<R> | Path<R & _TsModule>) : Path<R & _TsFile> =>
-    isTsModule(p)
-    ? addTs(p)
-    : tsFilePath(p);
+    <R>(p : Path<R> | Path<TsModule & R>) : Path<TsFile & R> =>
+    RT.guardSum(p, TsFile)
+    ? p
+    : addTs(p);
 
 export const lastSegment = (path : Path) : string => {
     const segs = path.split("/");
@@ -75,7 +76,7 @@ export const lastSegment = (path : Path) : string => {
 };
 
 export const normaliseTsPath =
-    (cwd : Path<_Abs>, p : Path) : Path<_TsFile & _Abs> =>
-    isAbs(p)
+    (cwd : Path<Abs>, p : Path) : Path<TsFile & Abs> =>
+    RT.guardSum(p, Abs)
     ? ensureTs(p)
-    : ensureTs(liftUnsafe<string, _Path & _Abs>(join(cwd, p)));
+    : ensureTs(absJoin(cwd, p));

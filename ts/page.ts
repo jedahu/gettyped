@@ -1,22 +1,21 @@
 // import {inIdleTime} from "./utils";
 // import {none} from "./option";
+import * as RT from "./refined";
 import * as array from "./array";
 import * as omap from "./objmap";
+import {Abs} from "./path";
+import {FilePath} from "./path";
 import {Module} from "./module";
 import {Option} from "./option";
 import {Path} from "./path";
 import {RunRet} from "./types";
+import {TsFile} from "./path";
 import {WriteDiagHost} from "./types";
-import {_Abs} from "./path";
-import {_TsFile} from "./path";
-import {absPath} from "./path";
 import {dataset} from "./dom";
 import {flatten} from "fp-ts/lib/Chain";
 import {fromNullable} from "./option";
-import {lift} from "./refined";
 import {normaliseTsPath} from "./path";
 import {pair} from "./pair";
-import {path} from "./path";
 import {prequire} from "./prequire";
 import {unrequire} from "./prequire";
 import {whenSome} from "./option";
@@ -32,8 +31,8 @@ const mkWriteDiagHost = (p : Page) : WriteDiagHost => ({
         return p.cwd;
     },
 
-    getCanonicalFileName(name : string) : Path<_Abs & _TsFile> {
-        return normaliseTsPath(p.cwd, path(lift(name)));
+    getCanonicalFileName(name : string) : Path<Abs & TsFile> {
+        return normaliseTsPath(p.cwd, RT.lift(name, FilePath));
     },
 
     getNewLine() : string {
@@ -41,7 +40,7 @@ const mkWriteDiagHost = (p : Page) : WriteDiagHost => ({
     },
 
     getPositionFor(name : string, start : number) : Option<[number, number]> {
-        return p.moduleByPath(path(lift(name))).chain(m => {
+        return p.moduleByPath(RT.lift(name, FilePath)).chain(m => {
             const pos = fromNullable(m.model.getPositionAt(start));
             return pos.map(p => pair(p.lineNumber, p.column));
         });
@@ -78,13 +77,13 @@ const mkWriteDiagHost = (p : Page) : WriteDiagHost => ({
 export class Page {
     "@nominal" : "8f477dd8-46d7-4d0e-9ad4-a15443e215b5";
 
-    readonly cwd : Path<_Abs>;
+    readonly cwd : Path<Abs>;
     readonly modules : Readonly<{[p : string] : Module}>;
     readonly writeDiagHost : WriteDiagHost;
     private changePropagation : Promise<void>;
 
     private constructor(a : PageArgs) {
-        this.cwd = absPath(lift(a.cwd));
+        this.cwd = RT.lift(a.cwd, FilePath, Abs);
         this.modules = Object.freeze(omap.keyMk(m => m.absPath, a.modules));
         this.writeDiagHost = mkWriteDiagHost(this);
         this.changePropagation = Promise.resolve();

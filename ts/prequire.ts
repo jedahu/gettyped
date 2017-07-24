@@ -1,12 +1,12 @@
 import {Path} from "./path";
-import {_Abs} from "./path";
-import {_TsModule} from "./path";
+import {Abs} from "./path";
+import {TsModule} from "./path";
 
 const resetRequireError = () => {
     requirejs.onError = (e : any) => { throw e; };
 };
 
-export const prequire = async (paths : Array<Path<_Abs & _TsModule>>) : Promise<any> =>
+export const prequire = async (paths : Array<Path<Abs & TsModule>>) : Promise<any> =>
     new Promise((res, rej) => {
         requirejs.onError = rej;
         requirejs(
@@ -25,5 +25,5 @@ export const prequire = async (paths : Array<Path<_Abs & _TsModule>>) : Promise<
         throw e;
     });
 
-export const unrequire = (path : Path<_Abs & _TsModule>) : void =>
+export const unrequire = (path : Path<Abs & TsModule>) : void =>
     requirejs.undef(path);

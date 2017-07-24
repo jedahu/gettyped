@@ -1,7 +1,7 @@
 #+TITLE: Refine existing types
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-22 Sat]
+#+DATE: [2017-07-24 Mon]
 
 
 When the type you have at hand is not precise enough, refine it with a
@@ -197,29 +197,36 @@ A refined type is essentially a type paired with a predicate. They are tied
 together by a "smart constructor" which allows only valid instances to be
 constructed.
 
-Here is =Username=, a refinement of =string=. The constructor is private so the only
-way to create an instance is via =Username.mk= which throws on invalid input. This
-creates the compile time guarantee that all =Username= values are valid.
+Here is =Username=, a refinement of =string=. The only way to construct a user is
+with the =mkUser= function which throws on invalid input. This creates the compile
+time guarantee that all =Username= values are valid.
+
+This refinement has zero runtime overhead. There is no wrapping going on. All
+the original type's properties can be accessed on values of the refined type.
 
 #+BEGIN_SRC ts :module username-type
 import * as v from "./validation-helpers";
 
-export class Username {
-    "@nominal": "9cf52975-bdde-4291-a578-39f7b68dcb8d";
+export type Tag<A> = {
+    "@tag" : A;
+};
 
-    private constructor(public readonly value : string) {}
+export type Refined<A, T> = A & Tag<T>;
 
-    static is(name : string) : boolean {
-        return v.isValidUsername(name);
+const enum _Username {}
+
+export type Username = Refined<string, _Username>;
+
+export const isUsername =
+    (name : string) : name is Username =>
+    v.isValidUsername(name);
+
+export const mkUsername = (name : string) : Username => {
+    if (!isUsername(name)) {
+        throw new Error(`Invalid username ${name}.`);
     }
-
-    static mk(name : string) : Username {
-        if (!Username.is(name)) {
-            throw new Error(`Invalid username ${name}.`);
-        }
-        return new Username(name);
-    }
-}
+    return name;
+};
 #+END_SRC
 
 With this refined type no argument validation inside =hello= and =goodbye= is
@@ -236,21 +243,21 @@ If we forget to validate a =string= to a =Username= in some input (like
 #+BEGIN_SRC ts :module refine-the-type
 import {validatingPrompt} from "./validate-at-input-site";
 import {getDirtyData} from "./dirty-data";
-import {Username} from "./username-type";
+import {Username, isUsername, mkUsername} from "./username-type";
 
 export const refinedPrompt = async () : Promise<Username | undefined> => {
-    const name = await validatingPrompt(Username.is);
-    return name ? Username.mk(name) : undefined;
+    const name = await validatingPrompt(isUsername);
+    return name ? mkUsername(name) : undefined;
 };
 
 export const hello = (name : Username) : void =>
-    $gt.log("hello", name.value);
+    $gt.log("hello", name);
 
 export const goodbye = (name : Username) : void =>
-    $gt.log("bye", name.value);
+    $gt.log("bye", name);
 
 export const getData = () : Array<Username> =>
-    getDirtyData().filter(Username.is).map(Username.mk);
+    getDirtyData().filter(isUsername).map(mkUsername);
 
 export const run = async () : Promise<void> => {
     const name = await refinedPrompt();

@@ -1,7 +1,7 @@
 #+TITLE: Get Typed
 #+AUTHOR: Jeremy Hughes
 #+EMAIL: jedahu@gmail.com
-#+DATE: [2017-07-20 Thu]
+#+DATE: [2017-07-24 Mon]
 
 Types create guarantees. They describe properties of a program that can be
 verified without running it.
@@ -24,10 +24,22 @@ export const run = () : void => {
 #+END_SRC
 
 
-** Types can be used to...
-  :PROPERTIES:
-  :CUSTOM_ID: gt-topics-list
-  :END:
+** Types can be used for...
 
+*** Catching head-desk mistakes
 - [[./catch-simple-mistakes][Catch simple mistakes]]
 - [[./refined-types][Refine existing types]]
+- Tame the null pointer
+- Safely manipulate escaped strings
+
+*** Static checks and guarantees
+- Configuration
+- Dependency injection
+- User permissions
+- Resource access restrictions
+- Resource lifetime scope
+
+*** More
+- Statically restricted effects
+- Safe deep immutable updates
+- Statically calculated partial record fetch
