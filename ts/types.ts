@@ -1,5 +1,7 @@
-import {FilePath} from "./path";
 import {Option} from "./option";
+import {Path} from "./path";
+import {_Abs} from "./path";
+import {_TsFile} from "./path";
 
 import Editor = monaco.editor.IStandaloneCodeEditor;
 import Model = monaco.editor.IModel;
@@ -13,7 +15,7 @@ export type Config = {
 export type DiagType = "syntax" | "types";
 export type Diag = ts.Diagnostic & {
     diagType : DiagType;
-    module : FilePath;
+    module : Path<_Abs & _TsFile>;
 };
 
 export type DiagMap = {[absPath : string] : Array<Diag>};

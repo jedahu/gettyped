@@ -1,17 +1,22 @@
 // import {inIdleTime} from "./utils";
 // import {none} from "./option";
 import * as array from "./array";
-import * as fpath from "./path";
 import * as omap from "./objmap";
 import {Module} from "./module";
 import {Option} from "./option";
+import {Path} from "./path";
 import {RunRet} from "./types";
 import {WriteDiagHost} from "./types";
+import {_Abs} from "./path";
+import {_TsFile} from "./path";
+import {absPath} from "./path";
 import {dataset} from "./dom";
 import {flatten} from "fp-ts/lib/Chain";
 import {fromNullable} from "./option";
+import {lift} from "./refined";
 import {normaliseTsPath} from "./path";
 import {pair} from "./pair";
+import {path} from "./path";
 import {prequire} from "./prequire";
 import {unrequire} from "./prequire";
 import {whenSome} from "./option";
@@ -27,16 +32,16 @@ const mkWriteDiagHost = (p : Page) : WriteDiagHost => ({
         return p.cwd;
     },
 
-    getCanonicalFileName(name : string) : string {
-        return fpath.addTs(normaliseTsPath(p.cwd, name));
+    getCanonicalFileName(name : string) : Path<_Abs & _TsFile> {
+        return normaliseTsPath(p.cwd, path(lift(name)));
     },
 
     getNewLine() : string {
         return "\n";
     },
 
-    getPositionFor(path : string, start : number) : Option<[number, number]> {
-        return p.moduleByPath(path).chain(m => {
+    getPositionFor(name : string, start : number) : Option<[number, number]> {
+        return p.moduleByPath(path(lift(name))).chain(m => {
             const pos = fromNullable(m.model.getPositionAt(start));
             return pos.map(p => pair(p.lineNumber, p.column));
         });
@@ -73,13 +78,13 @@ const mkWriteDiagHost = (p : Page) : WriteDiagHost => ({
 export class Page {
     "@nominal" : "8f477dd8-46d7-4d0e-9ad4-a15443e215b5";
 
-    readonly cwd : string;
+    readonly cwd : Path<_Abs>;
     readonly modules : Readonly<{[p : string] : Module}>;
     readonly writeDiagHost : WriteDiagHost;
     private changePropagation : Promise<void>;
 
     private constructor(a : PageArgs) {
-        this.cwd = a.cwd;
+        this.cwd = absPath(lift(a.cwd));
         this.modules = Object.freeze(omap.keyMk(m => m.absPath, a.modules));
         this.writeDiagHost = mkWriteDiagHost(this);
         this.changePropagation = Promise.resolve();
@@ -103,7 +108,7 @@ export class Page {
         return new Page(a);
     }
 
-    moduleByPath(path : string) : Option<Module> {
+    moduleByPath(path : Path) : Option<Module> {
         const absPath = normaliseTsPath(this.cwd, path);
         return fromNullable(this.modules[absPath]);
     }

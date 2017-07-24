@@ -4,7 +4,6 @@ import * as str from "./string";
 import {Config} from "./types";
 import {Module} from "./module";
 import {Page} from "./page";
-import {addTs} from "./path";
 import {dataset} from "./dom";
 import {getTsOpts} from "./tsconfig";
 import {html as h} from "./dom";
@@ -73,7 +72,7 @@ const initEditors = (config : Config) : void => {
                     && !str.isBlank(path);
                 return option.guard(
                     test,
-                    () => pair(addTs(path as string), target as HTMLElement));
+                    () => pair(`${path}.ts`, target as HTMLElement));
             },
             Array.from(
                 document.querySelectorAll(

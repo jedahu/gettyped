@@ -1,16 +1,23 @@
-import * as fpath from "./path";
 import {Diag} from "./types";
 import {Editor} from "./types";
-import {FilePath} from "./path";
 import {Model} from "./types";
-import {ModulePath} from "./path";
 import {Output} from "./output";
+import {Path} from "./path";
 import {RunRet} from "./types";
 import {Uri} from "./types";
+import {_Abs} from "./path";
+import {_TsFile} from "./path";
+import {_TsModule} from "./path";
+import {absJoin} from "./path";
+import {absPath} from "./path";
 import {getClient} from "./ts-services";
 import {html as h} from "./dom";
+import {lift} from "./refined";
+import {normaliseTsPath} from "./path";
+import {path} from "./path";
+import {removeTs} from "./path";
+import {tsFilePath} from "./path";
 import {tss} from "./ts-services"
-import {unTs} from "./path";
 
 export type EditorOpts = {
     scrollbarSize : number;
@@ -148,14 +155,14 @@ const prepareTarget = (a : ModuleArgs) : Targets => {
     }
 };
 
-const getAbsPath = (a : ModuleArgs) : string =>
-    fpath.join(a.cwd, a.path);
+const getAbsPath = (a : ModuleArgs) : Path<_Abs & _TsFile> =>
+    tsFilePath(absJoin(absPath(lift(a.cwd)), path(lift(a.path))));
 
 type InitRet = {
     editor : Editor;
     model : Model;
     uri : Uri;
-    absPath : string;
+    absPath : Path<_Abs & _TsFile>;
     targets : Targets;
 };
 
@@ -175,11 +182,11 @@ const initialize = (a : ModuleArgs) : InitRet => {
 export class Module {
     "@nominal": "9d888206-d39d-466f-9d41-e16fb9ba5f24";
 
-    readonly absPath : FilePath;
+    readonly absPath : Path<_Abs & _TsFile>;
     readonly uri : Uri;
-    readonly path : FilePath;
-    readonly modulePath : ModulePath;
-    readonly cwd : FilePath;
+    readonly path : Path<_TsFile>;
+    readonly modulePath : Path<_Abs & _TsModule>;
+    readonly cwd : Path<_Abs>;
     readonly originalText : string;
     readonly editor : Editor;
     readonly model : Model;
@@ -188,14 +195,14 @@ export class Module {
     private readonly scrollbarSize : number;
 
     private constructor(a : ModuleArgs, i : InitRet) {
-        this.path = a.path as FilePath;
-        this.cwd = a.cwd as FilePath;
+        this.path = tsFilePath(lift(a.path));
+        this.cwd = absPath(lift(a.cwd));
         this.originalText = a.text;
         this.targets = i.targets;
         this.editor = i.editor;
         this.model = i.model;
-        this.absPath = i.absPath as FilePath;
-        this.modulePath = unTs(this.absPath);
+        this.absPath = i.absPath;
+        this.modulePath = removeTs(this.absPath);
         this.uri = i.uri;
         this.scrollbarSize = a.scrollbarSize;
         this.output = Output.mk({target: i.targets.output});
@@ -268,10 +275,10 @@ export class Module {
         })();
     }
 
-    get importedPaths() : Array<string> {
+    get importedPaths() : Array<Path<_Abs & _TsFile>> {
         return tss.preProcessFile(this.model.getValue(), true, false).
             importedFiles.
-            map(f => f.fileName);
+            map(f => normaliseTsPath(this.cwd, path(lift(f.fileName))));
     }
 
     get emittedJs() : Promise<string> {
@@ -281,7 +288,7 @@ export class Module {
             return emitted.
                 outputFiles[0].
                 text.
-                replace(/^define\(/, `define('${fpath.unTs(this.absPath)}',`) +
+                replace(/^define\(/, `define('${this.modulePath}',`) +
                 `\n//# sourceURL=${this.absPath}`;
         })();
     }
