@@ -1,0 +1,165 @@
+#+TITLE: Safe escaped strings
+#+AUTHOR: Jeremy Hughes
+#+EMAIL: jedahu@gmail.com
+#+DATE: [2017-07-25 Tue]
+
+
+Avoid accidentally not escaping or double escaping.
+
+#+BEGIN_SRC ts :module unsafe-get-url :invisible t
+const url = 
+    "http://external-site.com/whats-for-dinner?food=fish%26chips&drink=beer";
+    
+export const getRedirectUrl = () : string => 
+    $gt.randomInt(0, 1) === 0
+    ? url
+    : encodeURIComponent(url);
+#+END_SRC
+
+#+BEGIN_SRC ts :module safe-get-url :invisible t
+import {esc, SafeString, SS} from "./safe-string";
+import {URL} from "./url-language";
+
+export const getRedirectUrl = () : SafeString<URL> => {
+    const food = esc(URL, "fish&chips");
+    return SS(URL)`http://external-site.com/whats-for-dinner?food=${food}`;
+};
+#+END_SRC
+
+I once worked on a site where outgoing links were tracked by a redirect URL.
+E.g. ~http://our-site.com/redirect?goto=http://external-site.com/path~.
+
+The destination URL had to be escaped because sometimes it contained query
+parameters. The problem was, destination URLs were retrieved as strings so
+without reading the code that created them it was impossible to know whether
+they were already escaped or not. The convention was that they were not, but the
+codebase was old and large so inevitably there were errors.
+
+To simulate this the ~getRedirectUrl()~ function from =./unsafe-get-url= will
+randomly return either an escaped or unescaped URL.
+
+#+BEGIN_SRC ts :module unsafe-redirects
+import {getRedirectUrl} from "./unsafe-get-url";
+
+const redirectBase = "http://our-site.com/redirect?goto=";
+const esc = encodeURIComponent;
+
+const createTrackingUrl = (url : string) : string =>
+      `${redirectBase}${esc(url)}`; // escape or not
+      // `${redirectBase}${url}`;   // which one to do?
+
+export const run = () : string => {
+    const url = getRedirectUrl();
+    return createTrackingUrl(url);
+};
+#+END_SRC
+
+Safe strings are a way to have the type system tell you whether a string needs
+to be escaped or not.
+
+They consist of:
+1. An escape function that can be identified by type. We'll call this a
+   =Language=.
+2. A way to tag or brand the string type with a Language.
+3. A way to created language branded strings.
+4. A way to concatenate such strings.
+
+The following example creates a safe string system:
+1. The =Language= interface.
+2. The =Tag= and =SafeString= types.
+3. The =esc= and =lit= functions. The first escapes, the second doesn't.
+4. The =concat= function, the =SS= string template tag function, the =Builder= class.
+
+#+BEGIN_SRC ts :module safe-string
+export type Tag<A> = {"@tag" : A};
+
+export type SafeString<A> = string & Tag<A>;
+
+export interface Language {
+    escape(s : string) : string;
+};
+
+export const esc =
+    <L extends Language>(lang : {new() : L}, s : string) : SafeString<L> =>
+    new lang().escape(s) as SafeString<L>;
+
+export const lit =
+    <L extends Language>(lang : {new() : L}, s : string) : SafeString<L> =>
+    s as SafeString<L>;
+
+export const concat = <L>(...xs : Array<SafeString<L>>) : SafeString<L> =>
+    xs.join("") as SafeString<L>;
+
+export const SS =
+    <L extends Language>(lang : {new() : L}) =>
+    (template : TemplateStringsArray, ...subs : Array<SafeString<L>>)
+    : SafeString<L> => {
+        let ss = "";
+        for (let i = 0; i < template.length - 1; ++i) {
+            ss += template[i] + subs[i];
+        }
+        ss += template[template.length -1];
+        return ss as SafeString<L>;
+    };
+
+export class Builder<L extends Language> {
+    private ss : string;
+    readonly lang : L;
+
+    constructor(langCtor : {new() : L}) {
+        this.ss = "";
+        this.lang = new langCtor();
+    }
+
+    lit(s : string) : this {
+        this.ss += s;
+        return this;
+    }
+
+    esc(s : string) : this {
+        this.ss += this.lang.escape(s);
+        return this;
+    }
+
+    str(s : SafeString<L>) : this {
+        this.ss += s;
+        return this;
+    }
+
+    get value() : SafeString<L> {
+        return this.ss as SafeString<L>;
+    }
+}
+#+END_SRC
+
+Here is URL escaping identified a the type level as the =URL= class.
+#+BEGIN_SRC ts :module url-language
+import {Language} from "./safe-string";
+
+export class URL implements Language {
+    escape(s : string) : string {
+        return encodeURIComponent(s);
+    }
+};
+#+END_SRC
+
+If safe strings are used consistently, and libraries are wrapped appropriately,
+the following is guaranteed:
+- Strings are always unescaped.
+- Safe strings are always escaped, no need to escape again.
+#+BEGIN_SRC ts :module safe-redirects
+import {esc, lit, SafeString, SS} from "./safe-string";
+import {URL} from "./url-language";
+import {getRedirectUrl} from "./safe-get-url";       //! toggle comments to
+// import {getRedirectUrl} from "./unsafe-get-url";  //! show compile-time safety
+
+const redirectBase = lit(URL, "http://our-site.com/redirect?goto=");
+
+const createTrackingUrl = (url : SafeString<URL>) : SafeString<URL> =>
+      SS(URL)`${redirectBase}${esc(URL, url)}`;
+
+export const run = () : SafeString<URL> => {
+    const url = getRedirectUrl();
+    return createTrackingUrl(url);
+};
+#+END_SRC
