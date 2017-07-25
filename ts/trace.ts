@@ -17,11 +17,11 @@ const chromeInfo : TraceInfo = {
     skip: 1
 };
 
-const firefoxInfo : TraceInfo = {
-    regex: /@(.*):([0-9]+):([0-9]+)/,
-    fields: 4,
-    skip: 0
-};
+// const firefoxInfo : TraceInfo = {
+//     regex: /@(.*):([0-9]+):([0-9]+)/,
+//     fields: 4,
+//     skip: 0
+// };
 
 const isChrome = () : boolean =>
     navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
