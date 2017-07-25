@@ -26,12 +26,12 @@ const firefoxInfo : TraceInfo = {
 const isChrome = () : boolean =>
     navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
 
-const isFirefox = () : boolean =>
-    navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+// const isFirefox = () : boolean =>
+//     navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
 
 const getTraceInfo = () : TraceInfo | undefined =>
     isChrome() ? chromeInfo :
-    isFirefox() ? firefoxInfo :
+    // isFirefox() ? firefoxInfo :
     undefined;
 
 const sourceMapComment = /\/\/# [s]ourceMappingURL=(.*)[\s]*$/m;

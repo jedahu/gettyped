@@ -140,7 +140,7 @@ export class Output {
                   [ stringify(err),
                     "\n",
                     h("span", {class: "gt-log-trace-note"}, [
-                        "Note: use Chrome or Firefox to enable",
+                        "Note: use Chrome to enable",
                         " clickable source mapped traces."
                     ])
                   ])
