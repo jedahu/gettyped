@@ -126,6 +126,14 @@ rec {
           || exit 1
     '';
   };
+  compress-js = runCommand "compress-js" {buildInputs = [nodejs];} ''
+    mkdir "$out"
+
+    export NODE_PATH="${node-deps}/node_modules";
+    "${node-deps}/node_modules/.bin/uglifyjs" \
+      "${compile-js}/${main-js}" \
+      -m -c -o "$out/${main-js}"
+  '';
   page-html = path: absPath: pkgs.stdenv.mkDerivation rec {
     name = "gettyped-page-html";
     phases = "buildPhase";
@@ -243,7 +251,7 @@ rec {
       ./ts/d/lib.gt.d.ts
     ];
   };
-  site = pkgs.stdenv.mkDerivation rec {
+  site = prod: pkgs.stdenv.mkDerivation rec {
     name = "gettyped-site";
     phases = "unpackPhase buildPhase";
     htmls = map (x: x.html) pages;
@@ -252,7 +260,7 @@ rec {
       ./static
       libs-d-ts
       compile-css
-      compile-js
+      (if prod then compress-js else compile-js)
     ];
     src = unpack-tree
       {cmd = "rsyncL"; echo = true;}
@@ -283,5 +291,6 @@ rec {
     #   done
     # '';
   };
-  main = site;
+  main = site false;
+  production = site true;
 }
